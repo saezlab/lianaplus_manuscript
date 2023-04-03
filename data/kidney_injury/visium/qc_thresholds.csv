@@ -1,6 +1,6 @@
 slide,gene_thr_max,gene_thr_min,total_thr,mt_thr,ribo_thr,hb_thr
 f2dps_158_processed,6000,400,25000,23,23,0.4
 f12hr_140_processed,5000,400,20000,30,16,0.3
-fsham_137_processed,5000,400,20000,25,16,0.4
+fsham_137_processed,5000,400,20000,25,11,0.4
 f6wks_110_processed,6000,400,25000,45,23,0.4
 f4hr_115_processed,3200,400,10000,50,11,2

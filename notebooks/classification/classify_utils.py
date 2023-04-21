@@ -1,5 +1,7 @@
+import os
 import numpy as np
 import pandas as pd
+import scanpy as sc
 
 import muon as mu
 import liana as li
@@ -10,6 +12,7 @@ from collections import defaultdict
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import StratifiedKFold
 
 
 class NestedDict(dict):
@@ -26,6 +29,41 @@ def _encode_y(y):
     le.fit(y)
     return le.transform(y)
 
+
+
+def classifier_pipe(adata, dataset):    
+    sample_key = adata.uns['sample_key']
+    batch_key = adata.uns['batch_key']
+    condition_key = adata.uns['condition_key']
+    
+    # methods to use
+    methods = li.mt.show_methods()
+    # in case a method is missing Magnitude Score, use Specificity Score
+    methods['score_key'] = methods["Magnitude Score"].fillna(methods["Specificity Score"])
+    # remove Geometric Mean	method
+    methods = methods[methods['Method Name'] != 'Geometric Mean']
+    # drop duplicated scores (expr_prod for NATMI & Connectome)
+    methods = methods.drop_duplicates(subset=['Method Name', 'score_key'])
+    methods = methods[['Method Name', 'score_key']]
+    
+    
+    adata.uns['mofa_res'] = NestedDict()
+    adata.uns['tensor_res'] = NestedDict()
+    adata.uns['auc'] = pd.DataFrame(columns=['reduction_name', 'score_key', 'fold',
+                                             'auc', 'tpr', 'fpr', 'train_split', 'test_split'])
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+    
+    for score_key in methods['score_key']:
+        print(f"Creating views with: {score_key}")
+
+        run_mofatalk(adata=adata, score_key=score_key, sample_key=sample_key, condition_key=condition_key, batch_key=batch_key)
+        
+        run_tensor_c2c(adata=adata, score_key=score_key, sample_key=sample_key, condition_key=condition_key)
+        
+        run_classifier(adata=adata, skf=skf, score_key=score_key)
+
+    adata.uns['auc']['dataset'] = dataset
+    adata.uns['auc'].to_csv(os.path.join('data', 'results', f'{dataset}.csv'), index=False)
 
 
 def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key):

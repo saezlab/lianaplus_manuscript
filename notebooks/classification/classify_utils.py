@@ -34,20 +34,21 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key):
                                 score_key=score_key,
                                 obs_keys=[condition_key, batch_key], # add those to mdata.obs
                                 lr_prop = 0.2, # minimum required proportion of samples to keep an LR
-                                lrs_per_sample = 10, # minimum number of interactions to keep a sample in a specific view
+                                lrs_per_sample = 5, # minimum number of interactions to keep a sample in a specific view
                                 lrs_per_view = 10, # minimum number of interactions to keep a view
-                                samples_per_view = 10, # minimum number of samples to keep a view
+                                samples_per_view = 5, # minimum number of samples to keep a view
                                 min_variance = 0, # minimum variance to keep an interaction
                                 lr_fill = 0, # fill missing LR values across samples with this
                                 verbose=True
                                 ).copy()
     
     mu.tl.mofa(mdata,
-           use_obs='union',
-           convergence_mode='medium',
-           n_factors=10,
-           seed=1337
-           )
+               use_obs='union',
+               convergence_mode='medium',
+               n_factors=10,
+               seed=1337
+               )
+    
     y = mdata.obs[condition_key]
     
     # save results
@@ -64,8 +65,9 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key):
     tensor = li.multi.to_tensor_c2c(adata,
                                     sample_key=sample_key,
                                     score_key='magnitude_rank', # can be any score from liana
-                                    how='outer_cells', # how to join the samples
+                                    how='outer', # how to join the samples
                                     non_expressed_fill=0, # value to fill non-expressed interactions
+                                    outer_fraction = 0.2, 
                                     )
     
     context_dict = adata.obs[[sample_key, condition_key]].drop_duplicates()
@@ -74,7 +76,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key):
 
     tensor_meta = c2c.tensor.generate_tensor_metadata(interaction_tensor=tensor,
                                                     metadata_dicts=[context_dict, None, None, None],
-                                                    fill_with_order_elements=True
+                                                    fill_with_order_elements=True,
                                                     )
     
     
@@ -121,22 +123,24 @@ def run_classifier(adata, score_key, reduction_name, skf, n_estimators=500):
     fold = 0
     
     for train_index, test_index in skf.split(X, y):
+        # NOTE: this does not ensure that the same samples are used for training and testing of MOFA and C2C
+        # Question: is this a problem? Should we use the same samples for both?
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
         
-        clf = RandomForestClassifier(n_estimators=n_estimators, random_state=0)
-        clf.fit(X_train, y_train)
-        
-        y_prob = clf.predict_proba(X_test)[:, 1]
-        
-        fpr, tpr, _ = roc_curve(y_test, y_prob)
-        roc_auc = auc(fpr, tpr)
-        
-        # save row to auc dataframe
-        # TODO: this is not very elegant
+        roc_auc, tpr, fpr = _run_rf_auc(X_train, X_test, y_train, y_test, n_estimators=n_estimators)
         adata.uns['auc'].loc[len(adata.uns['auc'])] = [reduction_name, score_key, fold, roc_auc, tpr, fpr, train_index, test_index]
         
         fold += 1
     
     
+def _run_rf_auc(X_train, X_test, y_train, y_test, n_estimators=500):
+    clf = RandomForestClassifier(n_estimators=n_estimators, random_state=0)
+    clf.fit(X_train, y_train)
+
+    y_prob = clf.predict_proba(X_test)[:, 1]
+
+    fpr, tpr, _ = roc_curve(y_test, y_prob)
+    roc_auc = auc(fpr, tpr)
     
+    return roc_auc, tpr, fpr

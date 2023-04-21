@@ -51,7 +51,7 @@ def classifier_pipe(adata, dataset):
     adata.uns['tensor_res'] = NestedDict()
     adata.uns['auc'] = pd.DataFrame(columns=['reduction_name', 'score_key', 'fold',
                                              'auc', 'tpr', 'fpr', 'train_split', 'test_split'])
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+    skf = StratifiedKFold(n_splits=3, shuffle=True, random_state=0)
     
     for score_key in methods['score_key']:
         print(f"Creating views with: {score_key}")
@@ -71,7 +71,7 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key):
                                 sample_key=sample_key,
                                 score_key=score_key,
                                 obs_keys=[condition_key, batch_key], # add those to mdata.obs
-                                lr_prop = 0.2, # minimum required proportion of samples to keep an LR
+                                lr_prop = 0.3, # minimum required proportion of samples to keep an LR
                                 lrs_per_sample = 5, # minimum number of interactions to keep a sample in a specific view
                                 lrs_per_view = 10, # minimum number of interactions to keep a view
                                 samples_per_view = 5, # minimum number of samples to keep a view
@@ -105,7 +105,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key):
                                     score_key='magnitude_rank', # can be any score from liana
                                     how='outer', # how to join the samples
                                     non_expressed_fill=0, # value to fill non-expressed interactions
-                                    outer_fraction = 0.2, 
+                                    outer_fraction = 0.3, 
                                     )
     
     context_dict = adata.obs[[sample_key, condition_key]].drop_duplicates()
@@ -123,7 +123,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key):
                                                     copy_tensor=True, # Whether to output a new tensor or modifying the original
                                                     rank=10, 
                                                     tf_optimization='regular', # To define how robust we want the analysis to be.
-                                                    random_state=0, # Random seed for reproducibility
+                                                    random_state=1337, # Random seed for reproducibility
                                                     device='cpu',
                                                     elbow_metric='error',
                                                     smooth_elbow=False, 

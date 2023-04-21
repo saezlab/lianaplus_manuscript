@@ -1,4 +1,5 @@
 from scipy.stats import zscore
+import numpy as np
 
 def filter_samples(adata, sample_key, condition_key, 
                    min_cells_per_sample, sample_zcounts_max,
@@ -13,8 +14,6 @@ def filter_samples(adata, sample_key, condition_key,
     
     
     """
-    
-    
     # calculate total sample counts & zscores
     sample_tcounts = adata.obs[sample_key].value_counts()
     sample_zcounts = zscore(sample_tcounts)

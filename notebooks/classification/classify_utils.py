@@ -8,7 +8,6 @@ import cell2cell as c2c
 from collections import defaultdict
 
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import LabelEncoder
 
@@ -100,7 +99,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key):
     factor_scores = tensor.factors['Contexts'].join(tensor_meta[0].set_index('Element'))
     y = factor_scores['Category']
     
-    # save results
+    # save results TODO: change to dict somehow?
     adata.uns['tensor_res']['X'][score_key] = factor_scores.copy()
     adata.uns['tensor_res']['y'][score_key] = y
     
@@ -109,7 +108,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key):
 
 
 
-def run_classifier(adata, score_key, reduction_name, n_splits=5, n_estimators=500):
+def run_classifier(adata, score_key, reduction_name, skf, n_estimators=500):
     """
     Run a Random Forest classifier on the given data and return the AUC.
     """
@@ -118,7 +117,6 @@ def run_classifier(adata, score_key, reduction_name, n_splits=5, n_estimators=50
     
     X = reduction.X_0[score_key]
     y = reduction.y_0[score_key]
-    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=0)
     
     fold = 0
     
@@ -135,7 +133,8 @@ def run_classifier(adata, score_key, reduction_name, n_splits=5, n_estimators=50
         roc_auc = auc(fpr, tpr)
         
         # save row to auc dataframe
-        adata.uns['auc'].loc[len(adata.uns['auc'])] = [reduction_name, score_key, fold, roc_auc, tpr, fpr]
+        # TODO: this is not very elegant
+        adata.uns['auc'].loc[len(adata.uns['auc'])] = [reduction_name, score_key, fold, roc_auc, tpr, fpr, train_index, test_index]
         
         fold += 1
     

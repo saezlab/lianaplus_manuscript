@@ -110,31 +110,42 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key):
 
 
 
-def run_classifier(adata, score_key, reduction_name, skf, n_estimators=500):
+def run_classifier(adata, score_key, skf, n_estimators=500):
     """
     Run a Random Forest classifier on the given data and return the AUC.
     """
     
-    reduction = adata.uns[reduction_name]
+    assert all(np.isin(['mofa_res', 'tensor_res', 'auc'], adata.uns_keys())), 'Run the setup function first.'
     
-    X = reduction.X_0[score_key]
-    y = reduction.y_0[score_key]
+    mofa = adata.uns['mofa_res']
+    X_m = mofa.X_0[score_key]
+    y_m = mofa.y_0[score_key]
+    
+    tensor = adata.uns['tensor_res']
+    X_t = tensor.X_0[score_key]
+    y_t = tensor.y_0[score_key]
+    
+    assert X_m.shape[0] == y_m.shape[0], 'mofa and tensor have different number of samples.'
     
     fold = 0
     
-    for train_index, test_index in skf.split(X, y):
-        # NOTE: this does not ensure that the same samples are used for training and testing of MOFA and C2C
-        # Question: is this a problem? Should we use the same samples for both?
-        X_train, X_test = X[train_index], X[test_index]
-        y_train, y_test = y[train_index], y[test_index]
+    for train_index, test_index in skf.split(X_m, y_m):
         
-        roc_auc, tpr, fpr = _run_rf_auc(X_train, X_test, y_train, y_test, n_estimators=n_estimators)
-        adata.uns['auc'].loc[len(adata.uns['auc'])] = [reduction_name, score_key, fold, roc_auc, tpr, fpr, train_index, test_index]
+        # Evaluate MOFA
+        roc_auc, tpr, fpr = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
+        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['mofa', score_key, fold, roc_auc, tpr, fpr, train_index, test_index]
+        
+        # Evaluate Tensor
+        roc_auc, tpr, fpr = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
+        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['tensor', score_key, fold, roc_auc, tpr, fpr, train_index, test_index]
         
         fold += 1
     
     
-def _run_rf_auc(X_train, X_test, y_train, y_test, n_estimators=500):
+def _run_rf_auc(X, y, train_index, test_index, n_estimators=500):
+    X_train, X_test = X[train_index], X[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+    
     clf = RandomForestClassifier(n_estimators=n_estimators, random_state=0)
     clf.fit(X_train, y_train)
 

@@ -73,13 +73,15 @@ def classifier_pipe(adata, dataset, use_gpu=True):
 
 
 def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset, gpu_mode=False):
+    ## NOTE: enable more keys to be added to mdata.obs
+    
     mdata = li.multi.lrs_to_views(adata,
                                 sample_key=sample_key,
                                 score_key=score_key,
                                 obs_keys=[condition_key, batch_key], # add those to mdata.obs
                                 lr_prop = 0.33, # minimum required proportion of samples to keep an LR
                                 lrs_per_sample = 5, # minimum number of interactions to keep a sample in a specific view
-                                lrs_per_view = 10, # minimum number of interactions to keep a view
+                                lrs_per_view = 15, # minimum number of interactions to keep a view
                                 samples_per_view = 5, # minimum number of samples to keep a view
                                 min_variance = 0, # minimum variance to keep an interaction
                                 lr_fill = 0, # fill missing LR values across samples with this
@@ -169,6 +171,8 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
     
     adata.uns['tensor_res']['X_0'][score_key] = tensor.factors['Contexts'].values
     adata.uns['tensor_res']['y_0'][score_key] = _encode_y(y)
+    
+    # TODO: write adata to disk
     
     gc.collect()
 

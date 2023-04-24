@@ -124,7 +124,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
     
     tensor = li.multi.to_tensor_c2c(adata,
                                     sample_key=sample_key,
-                                    score_key='magnitude_rank', # can be any score from liana
+                                    score_key=score_key, # can be any score from liana
                                     how='outer', # how to join the samples
                                     non_expressed_fill=0, # value to fill non-expressed interactions
                                     outer_fraction = 0.33, 

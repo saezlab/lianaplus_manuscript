@@ -12,7 +12,7 @@ import cell2cell as c2c
 from collections import defaultdict
 
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, f1_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold
 
@@ -20,7 +20,8 @@ def _dict_setup(adata, uns_key):
     adata.uns[uns_key] = dict()
     adata.uns[uns_key] = {'X': {}, 'y': {}, 'X_0': {}, 'y_0': {}}
     adata.uns['auc'] = pd.DataFrame(columns=['reduction_name', 'score_key', 'fold',
-                                            'auc', 'tpr', 'fpr', 'oob_score', 'train_split', 'test_split', 'test_classes'])
+                                            'auc', 'tpr', 'fpr', 'f1_score', 'oob_score',
+                                            'train_split', 'test_split', 'test_classes'])
 
 def _encode_y(y):
     # create a LabelEncoder object & and transform the labels
@@ -142,7 +143,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
                                                     rank=10, 
                                                     tf_optimization='regular', # To define how robust we want the analysis to be.
                                                     random_state=1337, # Random seed for reproducibility
-                                                    device=device, # TODO: change to gpu
+                                                    device=device,
                                                     elbow_metric='error',
                                                     smooth_elbow=False, 
                                                     upper_rank=20,
@@ -196,13 +197,13 @@ def run_classifier(adata, score_key, skf, n_estimators=100):
     for train_index, test_index in skf.split(X_m, y_m):
         
         # Evaluate MOFA
-        roc_auc, tpr, fpr, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
-        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['mofa', score_key, fold, roc_auc, tpr, fpr, oob_score,
+        roc_auc, tpr, fpr, f1, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
+        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['mofa', score_key, fold, roc_auc, tpr, fpr, f1, oob_score,
                                                        train_index, test_index, y_m[test_index]]
         
         # Evaluate Tensor
-        roc_auc, tpr, fpr, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
-        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['tensor', score_key, fold, roc_auc, tpr, fpr, oob_score,
+        roc_auc, tpr, fpr, f1, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
+        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['tensor', score_key, fold, roc_auc, tpr, fpr, f1, oob_score,
                                                        train_index, test_index, y_t[test_index]]
         
         fold += 1
@@ -217,10 +218,14 @@ def _run_rf_auc(X, y, train_index, test_index, n_estimators=500):
     
     oob_score = clf.oob_score_
 
+    # NOTE: I'm using probabilities for AUC (more nuanced than binary predictions)
     y_prob = clf.predict_proba(X_test)[:, 1]
 
     fpr, tpr, _ = roc_curve(y_test, y_prob)
     roc_auc = auc(fpr, tpr)
     
-    return roc_auc, tpr, fpr, oob_score
+    y_pred = clf.predict(X_test)
+    f1 = f1_score(y_test, y_pred, average='weighted')
+    
+    return roc_auc, tpr, fpr, f1, oob_score
 

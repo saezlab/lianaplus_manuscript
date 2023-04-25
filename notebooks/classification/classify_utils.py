@@ -17,15 +17,14 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold
 
 N_SPLITS = 3
+N_FACTORS = 10
 
 # TODO: run method -> classify; next method (not loop over all methods)
 
 def _dict_setup(adata, uns_key):
     adata.uns[uns_key] = dict()
     adata.uns[uns_key] = {'X': {}, 'X_0': {}, 'y_0': {}}
-    adata.uns['auc'] = pd.DataFrame(columns=['reduction_name', 'score_key', 'fold',
-                                            'auc', 'tpr', 'fpr', 'f1_score', 'oob_score',
-                                            'train_split', 'test_split', 'test_classes'])
+
 
 def _encode_y(y):
     # create a LabelEncoder object & and transform the labels
@@ -85,7 +84,7 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset
     mu.tl.mofa(mdata,
                use_obs='union',
                convergence_mode='medium',
-               n_factors=10,
+               n_factors=N_FACTORS,
                seed=1337,
                gpu_mode=gpu_mode,
                )
@@ -136,7 +135,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
     tensor = c2c.analysis.run_tensor_cell2cell_pipeline(tensor,
                                                     tensor_meta,
                                                     copy_tensor=True, # Whether to output a new tensor or modifying the original
-                                                    rank=10, 
+                                                    rank=N_FACTORS, 
                                                     tf_optimization='regular', # To define how robust we want the analysis to be.
                                                     random_state=1337, # Random seed for reproducibility
                                                     device=device,
@@ -164,10 +163,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
     adata.uns['tensor_res']['X_0'][score_key] = tensor.factors['Contexts'].values
     adata.uns['tensor_res']['y_0'][score_key] = _encode_y(y)
     
-    # TODO: write adata to disk
-    
     gc.collect()
-
 
 
 def run_classifier(adata, dataset, n_estimators=100):
@@ -182,6 +178,10 @@ def run_classifier(adata, dataset, n_estimators=100):
     
     skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=0)
     fold = 0
+    
+    adata.uns['auc'] = pd.DataFrame(columns=['reduction_name', 'score_key', 'fold',
+                                        'auc', 'tpr', 'fpr', 'f1_score', 'oob_score',
+                                        'train_split', 'test_split', 'test_classes'])
     
     for train_index, test_index in skf.split(X_dummy, y_dummy):
         print(f"{fold}, {train_index}, {test_index}")
@@ -198,8 +198,6 @@ def run_classifier(adata, dataset, n_estimators=100):
             assert all(np.isin(['mofa_res', 'tensor_res', 'auc'], adata.uns_keys())), 'Run the setup function first.'
             
             assert X_m.shape[0] == X_t.shape[0], 'mofa and tensor have different number of samples.'
-            
-
             
             # Evaluate MOFA
             roc_auc, tpr, fpr, f1, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)

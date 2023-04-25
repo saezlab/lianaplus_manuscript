@@ -23,7 +23,7 @@ N_FACTORS = 10
 
 def _dict_setup(adata, uns_key):
     adata.uns[uns_key] = dict()
-    adata.uns[uns_key] = {'X': {}, 'X_0': {}, 'y_0': {}}
+    adata.uns[uns_key] = {'X': {}, 'X_0': {}, 'y_0': {}, 'dimred_extra': {}}
 
 
 def _encode_y(y):

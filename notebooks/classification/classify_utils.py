@@ -16,6 +16,10 @@ from sklearn.metrics import roc_curve, auc, f1_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold
 
+N_SPLITS = 3
+
+# TODO: run method -> classify; next method (not loop over all methods)
+
 def _dict_setup(adata, uns_key):
     adata.uns[uns_key] = dict()
     adata.uns[uns_key] = {'X': {}, 'y': {}, 'X_0': {}, 'y_0': {}}
@@ -31,7 +35,7 @@ def _encode_y(y):
 
 
 
-def classifier_pipe(adata, dataset, use_gpu=True):    
+def dim_reduction_pipe(adata, dataset, use_gpu=True):    
     sample_key = adata.uns['sample_key']
     batch_key = adata.uns['batch_key']
     condition_key = adata.uns['condition_key']
@@ -48,8 +52,9 @@ def classifier_pipe(adata, dataset, use_gpu=True):
     
     _dict_setup(adata, 'mofa_res')
     _dict_setup(adata, 'tensor_res')
-    skf = StratifiedKFold(n_splits=3, shuffle=True, random_state=0)
+    # skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=0)
     
+    # TODO: pass splits before running with different methods
     for score_key in methods['score_key']:
         print(f"Creating views with: {score_key}")
 
@@ -61,12 +66,12 @@ def classifier_pipe(adata, dataset, use_gpu=True):
         run_tensor_c2c(adata=adata, score_key=score_key, sample_key=sample_key,
                        condition_key=condition_key, dataset=dataset, use_gpu=use_gpu)
         
-        # TODO: splits before running with different methods
-        # NOTE: to check if the test classes are balanced
-        run_classifier(adata=adata, skf=skf, score_key=score_key)
+        # run_classifier(adata=adata, skf=skf, score_key=score_key)
 
     adata.uns['auc']['dataset'] = dataset
     adata.uns['auc'].to_csv(os.path.join('data', 'results', f'{dataset}.csv'), index=False)
+    
+    adata.write(os.path.join('data', 'results', f'{dataset}_dimred.h5ad'))
 
 
 def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset, gpu_mode=False):
@@ -98,7 +103,6 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset
     # save results
     factor_scores = li.multi.get_factor_scores(mdata, obsm_key='X_mofa').copy()
     adata.uns['mofa_res']['X'][score_key] = factor_scores
-    adata.uns['mofa_res']['y'][score_key] = y
     
     ## create & write to dataset folder
     os.makedirs(os.path.join('data', 'results', 'mofa', dataset), exist_ok=True)
@@ -160,7 +164,6 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
     
     # save results TODO: change to dict somehow?
     adata.uns['tensor_res']['X'][score_key] = factor_scores.copy()
-    adata.uns['tensor_res']['y'][score_key] = y
     
     ## create & write to dataset folder
     os.makedirs(os.path.join('data', 'results', 'tensor', dataset), exist_ok=True)

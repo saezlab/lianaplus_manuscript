@@ -53,7 +53,6 @@ def dim_reduction_pipe(adata, dataset, use_gpu=True):
     _dict_setup(adata, 'mofa_res')
     _dict_setup(adata, 'tensor_res')
     
-    # TODO: pass splits before running with different methods
     for score_key in methods['score_key']:
         print(f"Creating views with: {score_key}")
 
@@ -64,18 +63,12 @@ def dim_reduction_pipe(adata, dataset, use_gpu=True):
         
         run_tensor_c2c(adata=adata, score_key=score_key, sample_key=sample_key,
                        condition_key=condition_key, dataset=dataset, use_gpu=use_gpu)
-        
-        # run_classifier(adata=adata, skf=skf, score_key=score_key)
-
-    adata.uns['auc']['dataset'] = dataset
-    adata.uns['auc'].to_csv(os.path.join('data', 'results', f'{dataset}.csv'), index=False)
     
     adata.write(os.path.join('data', 'results', f'{dataset}_dimred.h5ad'))
 
 
 def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset, gpu_mode=False):
-    ## NOTE: enable more keys to be added to mdata.obs
-    
+
     mdata = li.multi.lrs_to_views(adata,
                                   sample_key=sample_key,
                                   score_key=score_key,
@@ -177,38 +170,50 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
 
 
 
-def run_classifier(adata, score_key, skf, n_estimators=100):
+def run_classifier(adata, dataset, n_estimators=100):
     """
-    Run a Random Forest classifier on the given data and return the AUC.
+    Run a Random Forest classifier on the given data and return performance metrics.
     """
+    # TODO: avoid iterations over methods later on
+    score_keys = adata.uns['mofa_res']['X'].keys()
     
-    assert all(np.isin(['mofa_res', 'tensor_res', 'auc'], adata.uns_keys())), 'Run the setup function first.'
+    X_dummy = np.ones((adata.uns['mofa_res']['X']['lr_means'].shape), dtype=np.float32)
+    y_dummy = np.ones((adata.uns['mofa_res']['X']['lr_means'].shape[0]), dtype=np.int16)
     
-    mofa = adata.uns['mofa_res']
-    X_m = mofa['X_0'][score_key]
-    y_m = mofa['y_0'][score_key]
-    
-    tensor = adata.uns['tensor_res']
-    X_t = tensor['X_0'][score_key]
-    y_t = tensor['y_0'][score_key]
-    
-    assert X_m.shape[0] == X_t.shape[0], 'mofa and tensor have different number of samples.'
-    
+    skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=0)
     fold = 0
     
-    for train_index, test_index in skf.split(X_m, y_m):
+    for train_index, test_index in skf.split(X_dummy, y_dummy):
+        print(f"{fold}, {train_index}, {test_index}")
         
-        # Evaluate MOFA
-        roc_auc, tpr, fpr, f1, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
-        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['mofa', score_key, fold, roc_auc, tpr, fpr, f1, oob_score,
-                                                       train_index, test_index, y_m[test_index]]
-        
-        # Evaluate Tensor
-        roc_auc, tpr, fpr, f1, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
-        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['tensor', score_key, fold, roc_auc, tpr, fpr, f1, oob_score,
-                                                       train_index, test_index, y_t[test_index]]
-        
+        for score_key in score_keys:
+            mofa = adata.uns['mofa_res']
+            X_m = mofa['X_0'][score_key]
+            y_m = mofa['y_0'][score_key]
+
+            tensor = adata.uns['tensor_res']
+            X_t = tensor['X_0'][score_key]
+            y_t = tensor['y_0'][score_key]
+    
+            assert all(np.isin(['mofa_res', 'tensor_res', 'auc'], adata.uns_keys())), 'Run the setup function first.'
+            
+            assert X_m.shape[0] == X_t.shape[0], 'mofa and tensor have different number of samples.'
+            
+
+            
+            # Evaluate MOFA
+            roc_auc, tpr, fpr, f1, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
+            adata.uns['auc'].loc[len(adata.uns['auc'])] = ['mofa', score_key, fold, roc_auc, tpr, fpr, f1, oob_score,
+                                                        train_index, test_index, y_m[test_index]]
+            
+            # Evaluate Tensor
+            roc_auc, tpr, fpr, f1, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
+            adata.uns['auc'].loc[len(adata.uns['auc'])] = ['tensor', score_key, fold, roc_auc, tpr, fpr, f1, oob_score,
+                                                        train_index, test_index, y_t[test_index]]
         fold += 1
+    
+    adata.uns['auc']['dataset'] = dataset
+    adata.uns['auc'].to_csv(os.path.join('data', 'results', f'{dataset}.csv'), index=False)
     
     
 def _run_rf_auc(X, y, train_index, test_index, n_estimators=500):

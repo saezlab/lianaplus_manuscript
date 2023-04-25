@@ -16,14 +16,11 @@ from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold
 
-
-class NestedDict(dict):
-    def __missing__(self, x):
-        self[x] = NestedDict()
-        return self[x]
-    
-    def __getattr__(self, x):
-        return self[x]
+def _dict_setup(adata, uns_key):
+    adata.uns[uns_key] = dict()
+    adata.uns[uns_key] = {'X': {}, 'y': {}, 'X_0': {}, 'y_0': {}}
+    adata.uns['auc'] = pd.DataFrame(columns=['reduction_name', 'score_key', 'fold',
+                                            'auc', 'tpr', 'fpr', 'oob_score', 'train_split', 'test_split', 'test_classes'])
 
 def _encode_y(y):
     # create a LabelEncoder object & and transform the labels
@@ -48,10 +45,8 @@ def classifier_pipe(adata, dataset, use_gpu=True):
     methods = methods.drop_duplicates(subset=['Method Name', 'score_key'])
     methods = methods[['Method Name', 'score_key']]
     
-    adata.uns['mofa_res'] = NestedDict()
-    adata.uns['tensor_res'] = NestedDict()
-    adata.uns['auc'] = pd.DataFrame(columns=['reduction_name', 'score_key', 'fold',
-                                             'auc', 'tpr', 'fpr', 'train_split', 'test_split'])
+    _dict_setup(adata, 'mofa_res')
+    _dict_setup(adata, 'tensor_res')
     skf = StratifiedKFold(n_splits=3, shuffle=True, random_state=0)
     
     for score_key in methods['score_key']:
@@ -65,6 +60,7 @@ def classifier_pipe(adata, dataset, use_gpu=True):
         run_tensor_c2c(adata=adata, score_key=score_key, sample_key=sample_key,
                        condition_key=condition_key, dataset=dataset, use_gpu=use_gpu)
         
+        # TODO: splits before running with different methods
         # NOTE: to check if the test classes are balanced
         run_classifier(adata=adata, skf=skf, score_key=score_key)
 
@@ -76,17 +72,17 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset
     ## NOTE: enable more keys to be added to mdata.obs
     
     mdata = li.multi.lrs_to_views(adata,
-                                sample_key=sample_key,
-                                score_key=score_key,
-                                obs_keys=[condition_key, batch_key], # add those to mdata.obs
-                                lr_prop = 0.33, # minimum required proportion of samples to keep an LR
-                                lrs_per_sample = 5, # minimum number of interactions to keep a sample in a specific view
-                                lrs_per_view = 15, # minimum number of interactions to keep a view
-                                samples_per_view = 5, # minimum number of samples to keep a view
-                                min_variance = 0, # minimum variance to keep an interaction
-                                lr_fill = 0, # fill missing LR values across samples with this
-                                verbose=True
-                                ).copy()
+                                  sample_key=sample_key,
+                                  score_key=score_key,
+                                  obs_keys=[condition_key, batch_key], # add those to mdata.obs
+                                  lr_prop = 0.33, # minimum required proportion of samples to keep an LR
+                                  lrs_per_sample = 5, # minimum number of interactions to keep a sample in a specific view
+                                  lrs_per_view = 15, # minimum number of interactions to keep a view
+                                  samples_per_view = 5, # minimum number of samples to keep a view
+                                  min_variance = 0, # minimum variance to keep an interaction
+                                  lr_fill = 0, # fill missing LR values across samples with this
+                                  verbose=True
+                                  ).copy()
     
     mu.tl.mofa(mdata,
                use_obs='union',
@@ -178,7 +174,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
 
 
 
-def run_classifier(adata, score_key, skf, n_estimators=500):
+def run_classifier(adata, score_key, skf, n_estimators=100):
     """
     Run a Random Forest classifier on the given data and return the AUC.
     """
@@ -186,12 +182,12 @@ def run_classifier(adata, score_key, skf, n_estimators=500):
     assert all(np.isin(['mofa_res', 'tensor_res', 'auc'], adata.uns_keys())), 'Run the setup function first.'
     
     mofa = adata.uns['mofa_res']
-    X_m = mofa.X_0[score_key]
-    y_m = mofa.y_0[score_key]
+    X_m = mofa['X_0'][score_key]
+    y_m = mofa['y_0'][score_key]
     
     tensor = adata.uns['tensor_res']
-    X_t = tensor.X_0[score_key]
-    y_t = tensor.y_0[score_key]
+    X_t = tensor['X_0'][score_key]
+    y_t = tensor['y_0'][score_key]
     
     assert X_m.shape[0] == X_t.shape[0], 'mofa and tensor have different number of samples.'
     
@@ -200,12 +196,14 @@ def run_classifier(adata, score_key, skf, n_estimators=500):
     for train_index, test_index in skf.split(X_m, y_m):
         
         # Evaluate MOFA
-        roc_auc, tpr, fpr = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
-        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['mofa', score_key, fold, roc_auc, tpr, fpr, train_index, test_index]
+        roc_auc, tpr, fpr, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
+        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['mofa', score_key, fold, roc_auc, tpr, fpr, oob_score,
+                                                       train_index, test_index, y_m[test_index]]
         
         # Evaluate Tensor
-        roc_auc, tpr, fpr = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
-        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['tensor', score_key, fold, roc_auc, tpr, fpr, train_index, test_index]
+        roc_auc, tpr, fpr, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
+        adata.uns['auc'].loc[len(adata.uns['auc'])] = ['tensor', score_key, fold, roc_auc, tpr, fpr, oob_score,
+                                                       train_index, test_index, y_t[test_index]]
         
         fold += 1
     
@@ -214,12 +212,15 @@ def _run_rf_auc(X, y, train_index, test_index, n_estimators=500):
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
     
-    clf = RandomForestClassifier(n_estimators=n_estimators, random_state=0)
+    clf = RandomForestClassifier(n_estimators=n_estimators, random_state=1337, oob_score=True)
     clf.fit(X_train, y_train)
+    
+    oob_score = clf.oob_score_
 
     y_prob = clf.predict_proba(X_test)[:, 1]
 
     fpr, tpr, _ = roc_curve(y_test, y_prob)
     roc_auc = auc(fpr, tpr)
     
-    return roc_auc, tpr, fpr
+    return roc_auc, tpr, fpr, oob_score
+

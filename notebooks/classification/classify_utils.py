@@ -22,7 +22,7 @@ N_SPLITS = 3
 
 def _dict_setup(adata, uns_key):
     adata.uns[uns_key] = dict()
-    adata.uns[uns_key] = {'X': {}, 'y': {}, 'X_0': {}, 'y_0': {}}
+    adata.uns[uns_key] = {'X': {}, 'X_0': {}, 'y_0': {}}
     adata.uns['auc'] = pd.DataFrame(columns=['reduction_name', 'score_key', 'fold',
                                             'auc', 'tpr', 'fpr', 'f1_score', 'oob_score',
                                             'train_split', 'test_split', 'test_classes'])
@@ -52,7 +52,6 @@ def dim_reduction_pipe(adata, dataset, use_gpu=True):
     
     _dict_setup(adata, 'mofa_res')
     _dict_setup(adata, 'tensor_res')
-    # skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=0)
     
     # TODO: pass splits before running with different methods
     for score_key in methods['score_key']:

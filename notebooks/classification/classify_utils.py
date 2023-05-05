@@ -214,10 +214,11 @@ def run_classifier(adata, dataset, n_estimators=100):
     adata.uns['auc'].to_csv(os.path.join('data', 'results', f'{dataset}.csv'), index=False)
     
     
-def _run_rf_auc(X, y, train_index, test_index, n_estimators=500):
+def _run_rf_auc(X, y, train_index, test_index, n_estimators=100):
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
     
+    # NOTE: I define it here, which means that if I pass the same splits, the same results will be returned.
     clf = RandomForestClassifier(n_estimators=n_estimators, random_state=1337, oob_score=True)
     clf.fit(X_train, y_train)
     

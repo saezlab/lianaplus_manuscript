@@ -55,7 +55,7 @@ def _generate_splits(n_samples, random_state):
     
 
 
-def dim_reduction_pipe(adata, dataset, use_gpu=True):    
+def dim_reduction_pipe(adata, dataset_name, use_gpu=True):    
     sample_key = adata.uns['sample_key']
     batch_key = adata.uns['batch_key']
     condition_key = adata.uns['condition_key']
@@ -78,16 +78,16 @@ def dim_reduction_pipe(adata, dataset, use_gpu=True):
 
         # Note: I should save results - to avoid re-running the same things
         run_mofatalk(adata=adata, score_key=score_key, sample_key=sample_key, 
-                     condition_key=condition_key, batch_key=batch_key, dataset=dataset,
+                     condition_key=condition_key, batch_key=batch_key, dataset_name=dataset_name,
                      gpu_mode=False) # NOTE: use_gpu is not passed
         
         run_tensor_c2c(adata=adata, score_key=score_key, sample_key=sample_key,
-                       condition_key=condition_key, dataset=dataset, use_gpu=use_gpu)
+                       condition_key=condition_key, dataset_name=dataset_name, use_gpu=use_gpu)
     
-    adata.write(os.path.join('data', 'results', f'{dataset}_dimred.h5ad'))
+    adata.write(os.path.join('data', 'results', f'{dataset_name}_dimred.h5ad'))
 
 
-def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset, gpu_mode=False):
+def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset_name, gpu_mode=False):
 
     mdata = li.multi.lrs_to_views(adata,
                                   sample_key=sample_key,
@@ -117,9 +117,9 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset
     factor_scores = li.multi.get_factor_scores(mdata, obsm_key='X_mofa').copy()
     adata.uns['mofa_res']['X'][score_key] = factor_scores
     
-    ## create & write to dataset folder
-    os.makedirs(os.path.join('data', 'results', 'mofa', dataset), exist_ok=True)
-    factor_scores.to_csv(os.path.join('data', 'results', 'mofa', dataset, f'{score_key}.csv'))    
+    ## create & write to dataset_name folder
+    os.makedirs(os.path.join('data', 'results', 'mofa', dataset_name), exist_ok=True)
+    factor_scores.to_csv(os.path.join('data', 'results', 'mofa', dataset_name, f'{score_key}.csv'))    
     
     adata.uns['mofa_res']['X_0'][score_key] = mdata.obsm['X_mofa'].copy()
     adata.uns['mofa_res']['y_0'][score_key] = _encode_y(y)
@@ -128,7 +128,7 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset
     
 
 
-def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu=True):
+def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset_name, use_gpu=True):
     if use_gpu:
         import tensorly as tl
         tl.set_backend('pytorch')
@@ -179,9 +179,9 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
     # save results TODO: change to dict somehow?
     adata.uns['tensor_res']['X'][score_key] = factor_scores.copy()
     
-    ## create & write to dataset folder
-    os.makedirs(os.path.join('data', 'results', 'tensor', dataset), exist_ok=True)
-    factor_scores.to_csv(os.path.join('data', 'results', 'tensor', dataset, f'{score_key}.csv'))    
+    ## create & write to dataset_name folder
+    os.makedirs(os.path.join('data', 'results', 'tensor', dataset_name), exist_ok=True)
+    factor_scores.to_csv(os.path.join('data', 'results', 'tensor', dataset_name, f'{score_key}.csv'))    
     
     adata.uns['tensor_res']['X_0'][score_key] = tensor.factors['Contexts'].values
     adata.uns['tensor_res']['y_0'][score_key] = _encode_y(y)
@@ -189,7 +189,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
     gc.collect()
 
 
-def run_classifier(adata, dataset, n_estimators=100):
+def run_classifier(adata, dataset_name, n_estimators=100):
     """
     Run a Random Forest classifier on the given data and return performance metrics.
     """
@@ -238,10 +238,10 @@ def run_classifier(adata, dataset, n_estimators=100):
             fold += 1
             
     evaluate = pd.DataFrame(evaluate)
-    evaluate['dataset'] = dataset
+    evaluate['dataset'] = dataset_name
     adata.uns['evaluate'] = evaluate
     
-    evaluate.to_csv(os.path.join('data', 'results', f'{dataset}.csv'), index=False)
+    evaluate.to_csv(os.path.join('data', 'results', f'{dataset_name}.csv'), index=False)
     
     
 def _run_rf_auc(X, y, train_index, test_index, n_estimators=100):

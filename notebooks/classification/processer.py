@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import scanpy as sc
+from pandas import read_csv
 from prep_utils import filter_samples, filter_celltypes, check_group_balance, map_gene_symbols
 from scipy.sparse import csr_matrix, issparse
 import liana as li
@@ -18,10 +19,11 @@ class DatasetHandler:
                 'sample_zcounts_min': -2,
                 'min_cells': 20,
                 'min_samples': 5,
-                'use_raw': None,
+                'use_raw': False,
                 'change_var_to': None,
                 'conditions_to_keep': None,
-                'organism':'human'
+                'organism':'human',
+                'map_path':None
             },
             'kuppe': {
                 'groupby': 'cell_type',
@@ -33,10 +35,10 @@ class DatasetHandler:
                 'conditions_to_keep': ['ischemic', 'myogenic']
             },
             'habermann': {
-                'groupby': 'cell_type',
-                'sample_key': 'sample',
-                'condition_key': 'patient_group',
-                'batch_key': 'sex',
+                'groupby': 'celltype',
+                'sample_key': 'Sample_Name',
+                'condition_key': 'Status',
+                'batch_key': 'Sample_Source',
             },
             'reichart': {
                 'groupby':'celltype',
@@ -49,13 +51,15 @@ class DatasetHandler:
                 'groupby':'cluster',
                 'sample_key':'individual',
                 'condition_key':'diagnosis',
-                'batch_key':'sex'
+                'batch_key':'sex',
+                "map_path":"ensembl_to_symbol.csv"
             },
             'carraro': {
                 'groupby': 'major',
                 'sample_key': 'orig.ident',
                 'condition_key': 'type',
                 'batch_key': 'lab',
+                'min_cells_per_sample': 700,
             }
         }
         
@@ -87,11 +91,11 @@ class DatasetHandler:
         self.use_raw = dataset_info.get('use_raw', defaults['use_raw'])
         self.change_var_to = dataset_info.get('change_var_to', defaults['change_var_to'])
         self.conditions_to_keep = dataset_info.get('conditions_to_keep', defaults['conditions_to_keep'])
-        
+        self.map_path = dataset_info.get('map_path', defaults['map_path'])
     
     def process_dataset(self):
         
-        adata = sc.read_h5ad(os.path.join('data', f"{self.dataset_name}.h5ad"), backed='r')
+        adata = sc.read_h5ad(os.path.join('data', f"{self.dataset_name}.h5ad"))
         
         if self.conditions_to_keep is not None:
             msk = np.array([patient in self.conditions_to_keep for patient in adata.obs[self.condition_key]])
@@ -103,18 +107,18 @@ class DatasetHandler:
         if not issparse(adata.X):
             adata.X = csr_matrix(adata.X)
             
-            
-        if self.dataset_name=='velmeshev':
-            #TODO as param map_var that accepts a csv path
-            df = adata.var.reset_index()['index'].str.split('\\|', expand=True).rename(columns={0:'ensembl', 1:'genesymbol'})
-            adata.var = df.set_index('ensembl')
-            map_df = df.rename(columns={'ensembl':'alias', 'genesymbol':'gene'})
-            map_df
-            adata = map_gene_symbols(adata, map_df)
-            
         # change to gene symbols
         if self.change_var_to is not None:
             adata.var.index = adata.var[self.change_var_to]
+            
+        if self.map_path is not None:
+            
+            if self.dataset_name == 'velmeshev':
+                # NOTE: split to only ensembl ids...
+                adata.var.index = adata.var.index.str.split('\\|').str[0]
+                
+            map_df = read_csv(os.path.join('data', self.map_path))
+            adata = map_gene_symbols(adata, map_df)
             
         adata = filter_samples(adata, 
                                sample_key = self.sample_key,

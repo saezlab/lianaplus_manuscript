@@ -18,6 +18,7 @@ from sklearn.model_selection import StratifiedKFold
 
 N_SPLITS = 3
 N_FACTORS = 10
+INVERSE_FUN = lambda x: -np.log2(x)
 
 # TODO: run method -> classify; next method (not loop over all methods)
 
@@ -32,6 +33,26 @@ def _encode_y(y):
     le.fit(y)
     return le.transform(y)
 
+
+def _generate_splits(n_samples, random_state):
+    
+    X_dummy = np.ones((n_samples, N_FACTORS), dtype=np.int16)
+    y_dummy = np.ones(n_samples, dtype=np.int16)
+    
+    splits = pd.DataFrame(columns=['fold', 'train', 'test'])
+
+    skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=random_state)
+    fold = 0
+
+    for train_index, test_index in skf.split(X_dummy, y_dummy):
+        splits.loc[len(splits)] = [fold, train_index, test_index]
+
+        print(f"{fold}: {train_index}, {test_index}")
+        fold += 1
+    
+    # write splits
+    return splits
+    
 
 
 def dim_reduction_pipe(adata, dataset, use_gpu=True):    
@@ -71,6 +92,7 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset
     mdata = li.multi.lrs_to_views(adata,
                                   sample_key=sample_key,
                                   score_key=score_key,
+                                  inverse_fun=INVERSE_FUN,
                                   obs_keys=[condition_key, batch_key], # add those to mdata.obs
                                   lr_prop = 0.33, # minimum required proportion of samples to keep an LR
                                   lrs_per_sample = 5, # minimum number of interactions to keep a sample in a specific view
@@ -116,6 +138,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
     
     tensor = li.multi.to_tensor_c2c(adata,
                                     sample_key=sample_key,
+                                    inverse_fun=INVERSE_FUN,
                                     score_key=score_key, # can be any score from liana
                                     how='outer', # how to join the samples
                                     non_expressed_fill=0, # value to fill non-expressed interactions
@@ -133,22 +156,22 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset, use_gpu
     
     
     tensor = c2c.analysis.run_tensor_cell2cell_pipeline(tensor,
-                                                    tensor_meta,
-                                                    copy_tensor=True, # Whether to output a new tensor or modifying the original
-                                                    rank=N_FACTORS, 
-                                                    tf_optimization='regular', # To define how robust we want the analysis to be.
-                                                    random_state=1337, # Random seed for reproducibility
-                                                    device=device,
-                                                    elbow_metric='error',
-                                                    smooth_elbow=False, 
-                                                    upper_rank=20,
-                                                    tf_init='random', 
-                                                    tf_svd='numpy_svd', 
-                                                    cmaps=None, 
-                                                    sample_col='Element',
-                                                    group_col='Category', 
-                                                    output_fig=False,
-                                                    )
+                                                        tensor_meta,
+                                                        copy_tensor=True, # Whether to output a new tensor or modifying the original
+                                                        rank=N_FACTORS, 
+                                                        tf_optimization='regular', # To define how robust we want the analysis to be.
+                                                        random_state=1337, # Random seed for reproducibility
+                                                        device=device,
+                                                        elbow_metric='error',
+                                                        smooth_elbow=False, 
+                                                        upper_rank=20,
+                                                        tf_init='random', 
+                                                        tf_svd='numpy_svd', 
+                                                        cmaps=None, 
+                                                        sample_col='Element',
+                                                        group_col='Category', 
+                                                        output_fig=False,
+                                                        )
     
     factor_scores = tensor.factors['Contexts'].join(tensor_meta[0].set_index('Element'))
     y = factor_scores['Category']
@@ -173,45 +196,52 @@ def run_classifier(adata, dataset, n_estimators=100):
     # TODO: avoid iterations over methods later on
     score_keys = adata.uns['mofa_res']['X'].keys()
     
-    X_dummy = np.ones((adata.uns['mofa_res']['X']['lr_means'].shape), dtype=np.float32)
-    y_dummy = np.ones((adata.uns['mofa_res']['X']['lr_means'].shape[0]), dtype=np.int16)
+    evaluate = []
     
-    skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=0)
-    fold = 0
+    n_samples = adata.obs[adata.uns['sample_key']].nunique()
     
-    adata.uns['auc'] = pd.DataFrame(columns=['reduction_name', 'score_key', 'fold',
-                                        'auc', 'tpr', 'fpr', 'f1_score', 'oob_score',
-                                        'train_split', 'test_split', 'test_classes'])
+    random_states = range(0, 5)
     
-    for train_index, test_index in skf.split(X_dummy, y_dummy):
-        print(f"{fold}, {train_index}, {test_index}")
-        
-        for score_key in score_keys:
-            mofa = adata.uns['mofa_res']
-            X_m = mofa['X_0'][score_key]
-            y_m = mofa['y_0'][score_key]
+    for state in random_states:
+    
+        splits = _generate_splits(n_samples, random_state=state)
+    
+        for index, row in splits.iterrows():
+            fold = row['fold']
+            train_index = row['train']
+            test_index = row['test']
+            
+            for score_key in score_keys:
+                mofa = adata.uns['mofa_res']
+                X_m = mofa['X_0'][score_key]
+                y_m = mofa['y_0'][score_key]
 
-            tensor = adata.uns['tensor_res']
-            X_t = tensor['X_0'][score_key]
-            y_t = tensor['y_0'][score_key]
+                tensor = adata.uns['tensor_res']
+                X_t = tensor['X_0'][score_key]
+                y_t = tensor['y_0'][score_key]
+        
+                assert all(np.isin(['mofa_res', 'tensor_res'], adata.uns_keys())), 'Run the setup function first.'
+                
+                assert X_m.shape[0] == X_t.shape[0], 'mofa and tensor have different number of samples.'
+                
+                # Evaluate MOFA
+                auroc, tpr, fpr, f1, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
+                evaluate.append(_assign_dict(reduction_name='mofa', score_key=score_key, state=state, fold=fold,
+                                             auroc=auroc, tpr=tpr, fpr=fpr, f1_score=f1, oob_score=oob_score,
+                                             train_split=train_index, test_split=test_index, test_classes=y_m[test_index]))
+                
+                # Evaluate Tensor
+                auroc, tpr, fpr, f1, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
+                evaluate.append(_assign_dict(reduction_name='tensor', score_key=score_key, state=state, fold=fold,
+                                             auroc=auroc, tpr=tpr, fpr=fpr, f1_score=f1, oob_score=oob_score,
+                                             train_split=train_index, test_split=test_index, test_classes=y_m[test_index]))
+            fold += 1
+            
+    evaluate = pd.DataFrame(evaluate)
+    evaluate['dataset'] = dataset
+    adata.uns['evaluate'] = evaluate
     
-            assert all(np.isin(['mofa_res', 'tensor_res', 'auc'], adata.uns_keys())), 'Run the setup function first.'
-            
-            assert X_m.shape[0] == X_t.shape[0], 'mofa and tensor have different number of samples.'
-            
-            # Evaluate MOFA
-            roc_auc, tpr, fpr, f1, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
-            adata.uns['auc'].loc[len(adata.uns['auc'])] = ['mofa', score_key, fold, roc_auc, tpr, fpr, f1, oob_score,
-                                                        train_index, test_index, y_m[test_index]]
-            
-            # Evaluate Tensor
-            roc_auc, tpr, fpr, f1, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
-            adata.uns['auc'].loc[len(adata.uns['auc'])] = ['tensor', score_key, fold, roc_auc, tpr, fpr, f1, oob_score,
-                                                        train_index, test_index, y_t[test_index]]
-        fold += 1
-    
-    adata.uns['auc']['dataset'] = dataset
-    adata.uns['auc'].to_csv(os.path.join('data', 'results', f'{dataset}.csv'), index=False)
+    evaluate.to_csv(os.path.join('data', 'results', f'{dataset}.csv'), index=False)
     
     
 def _run_rf_auc(X, y, train_index, test_index, n_estimators=100):
@@ -228,10 +258,24 @@ def _run_rf_auc(X, y, train_index, test_index, n_estimators=100):
     y_prob = clf.predict_proba(X_test)[:, 1]
 
     fpr, tpr, _ = roc_curve(y_test, y_prob)
-    roc_auc = auc(fpr, tpr)
+    auroc = auc(fpr, tpr)
     
     y_pred = clf.predict(X_test)
     f1 = f1_score(y_test, y_pred, average='weighted')
     
-    return roc_auc, tpr, fpr, f1, oob_score
+    return auroc, tpr, fpr, f1, oob_score
 
+def _assign_dict(reduction_name, score_key, state, fold, auroc, tpr, fpr, f1_score, oob_score, train_split, test_split, test_classes):
+    return {'reduction_name': reduction_name,
+            'score_key': score_key, 
+            'state': state, 
+            'fold': fold,
+            'auroc': auroc, 
+            'tpr': tpr,
+            'fpr': fpr,
+            'f1_score': f1_score, 
+            'oob_score': oob_score,
+            'train_split': train_split, 
+            'test_split': test_split, 
+            'test_classes' : test_classes
+            }

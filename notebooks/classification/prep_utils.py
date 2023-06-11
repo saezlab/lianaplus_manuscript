@@ -1,6 +1,8 @@
 from scipy.stats import zscore
 import numpy as np
 
+MAX_GROUP_RATIO = 1.5
+
 def filter_samples(adata, sample_key, condition_key, 
                    min_cells_per_sample, sample_zcounts_max,
                    sample_zcounts_min):
@@ -132,3 +134,39 @@ def map_gene_symbols(adata, map_df):
         uns=adata.uns,
         obsm=adata.obsm,
     )
+
+
+def check_group_balance(adata, condition_key, sample_key):
+    samples_by_condition = adata.obs[[condition_key, sample_key]].drop_duplicates()[condition_key].groupby(adata.obs[condition_key]).count()
+    group_ratio = max(samples_by_condition) / min(samples_by_condition)
+
+    if group_ratio <= MAX_GROUP_RATIO:
+        print('Groups are balanced!')
+        return adata
+        
+    else:
+        print('Groups are imbalanced!')
+        
+        print(samples_by_condition)
+        
+        print('Balancing groups...')
+        # get n of group with least samples
+        min_group_n = (adata.obs[[condition_key, sample_key]].
+                    drop_duplicates().
+                    groupby(adata.obs[condition_key]).
+                    count().min()[0]
+                    )
+        
+        conditions = adata.obs[condition_key].unique()
+        
+        samples = []
+        for cond in conditions:
+            samples = samples + (adata.obs[[condition_key, sample_key]].
+                                drop_duplicates().
+                                query(f"{condition_key} == '{cond}'")[sample_key].
+                                sample(min_group_n, random_state=1337).
+                                values.tolist()
+                                )
+            
+        return adata[adata.obs[sample_key].isin(samples), :]
+        

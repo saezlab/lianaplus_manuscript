@@ -58,7 +58,7 @@ class DatasetHandler:
                 'batch_key': 'Sample_Source',
             },
             'reichart': {
-                'groupby':'celltype',
+                'groupby':'cell_type',
                 'sample_key':'Sample',
                 'condition_key':'disease',
                 'batch_key':'Sample_Source',

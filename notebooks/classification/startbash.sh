@@ -12,4 +12,10 @@
 #SBATCH --requeue
 #SBATCH --chdir /net/data.isilon/ag-saez/bq_ddimitrov/Repos/liana2_manuscript/notebooks/classification
 
-python $1 $2
+## loop over all datasets
+datasets=("carraro" "kuppe" "habermann" "reichart" "velmeshev")  # List of datasets
+
+for dataset in "${datasets[@]}"; do
+    echo "Now running dataset: $dataset"
+    python 1.run_pipeline.py "$dataset"
+done

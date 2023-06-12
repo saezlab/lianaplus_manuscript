@@ -17,7 +17,6 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold
 
 N_SPLITS = 3
-N_FACTORS = 10
 INVERSE_FUN = lambda x: -np.log2(x)
 
 # TODO: run method -> classify; next method (not loop over all methods)
@@ -34,9 +33,9 @@ def _encode_y(y):
     return le.transform(y)
 
 
-def _generate_splits(n_samples, random_state):
+def _generate_splits(n_samples, random_state, n_factors):
     
-    X_dummy = np.ones((n_samples, N_FACTORS), dtype=np.int16)
+    X_dummy = np.ones((n_samples, n_factors), dtype=np.int16)
     y_dummy = np.ones(n_samples, dtype=np.int16)
     
     splits = pd.DataFrame(columns=['fold', 'train', 'test'])
@@ -52,45 +51,14 @@ def _generate_splits(n_samples, random_state):
     
     # write splits
     return splits
-    
 
-
-# def dim_reduction_pipe(adata, dataset_name, sample_key, condition_key, batch_key, use_gpu=True):    
-    
-#     # methods to use
-#     methods = li.mt.show_methods()
-#     # in case a method is missing Magnitude Score, use Specificity Score
-#     methods['score_key'] = methods["Magnitude Score"].fillna(methods["Specificity Score"])
-#     # remove Geometric Mean	method
-#     methods = methods[methods['Method Name'] != 'Geometric Mean']
-#     # drop duplicated scores (expr_prod for NATMI & Connectome)
-#     methods = methods.drop_duplicates(subset=['Method Name', 'score_key'])
-#     methods = methods[['Method Name', 'score_key']]
-    
-#     _dict_setup(adata, 'mofa_res')
-#     _dict_setup(adata, 'tensor_res')
-    
-#     for score_key in methods['score_key']:
-#         print(f"Creating views with: {score_key}")
-
-#         # Note: I should save results - to avoid re-running the same things
-#         run_mofatalk(adata=adata, score_key=score_key, sample_key=sample_key, 
-#                      condition_key=condition_key, batch_key=batch_key, dataset_name=dataset_name,
-#                      gpu_mode=False) # NOTE: use_gpu is not passed
-        
-#         run_tensor_c2c(adata=adata, score_key=score_key, sample_key=sample_key,
-#                        condition_key=condition_key, dataset_name=dataset_name, use_gpu=use_gpu)
-    
-#     adata.write(os.path.join('data', 'results', f'{dataset_name}_dimred.h5ad'))
-
-
-def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset_name, gpu_mode=False):
+def run_mofatalk(adata, score_key, sample_key, condition_key, dataset_name, n_factors, gpu_mode=False):
 
     mdata = li.multi.lrs_to_views(adata,
                                   sample_key=sample_key,
                                   score_key=score_key,
                                   inverse_fun=INVERSE_FUN,
-                                  obs_keys=[condition_key, batch_key], # add those to mdata.obs
+                                  obs_keys=[condition_key], # add those to mdata.obs
                                   lr_prop = 0.33, # minimum required proportion of samples to keep an LR
                                   lrs_per_sample = 5, # minimum number of interactions to keep a sample in a specific view
                                   lrs_per_view = 15, # minimum number of interactions to keep a view
@@ -103,7 +71,8 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset
     mu.tl.mofa(mdata,
                use_obs='union',
                convergence_mode='medium',
-               n_factors=N_FACTORS,
+               n_factors=n_factors,
+               outfile=os.path.join('data', 'results', 'models', dataset_name, f'{score_key}.hdf5'),
                seed=1337,
                gpu_mode=gpu_mode,
                )
@@ -125,7 +94,7 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset
     
 
 
-def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset_name, use_gpu=True):
+def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset_name, n_factors, use_gpu=True):
     if use_gpu:
         import tensorly as tl
         tl.set_backend('pytorch')
@@ -151,11 +120,12 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset_name, us
                                                     fill_with_order_elements=True,
                                                     )
     
-    
+    output_folder = os.path.join('data', 'results', 'tensor', dataset_name)
+    os.makedirs(output_folder, exist_ok=True)
     tensor = c2c.analysis.run_tensor_cell2cell_pipeline(tensor,
                                                         tensor_meta,
                                                         copy_tensor=True, # Whether to output a new tensor or modifying the original
-                                                        rank=N_FACTORS, 
+                                                        rank=n_factors, 
                                                         tf_optimization='regular', # To define how robust we want the analysis to be.
                                                         random_state=1337, # Random seed for reproducibility
                                                         device=device,
@@ -168,6 +138,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset_name, us
                                                         sample_col='Element',
                                                         group_col='Category', 
                                                         output_fig=False,
+                                                        output_folder=output_folder
                                                         )
     
     factor_scores = tensor.factors['Contexts'].join(tensor_meta[0].set_index('Element'))
@@ -176,69 +147,13 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset_name, us
     # save results TODO: change to dict somehow?
     adata.uns['tensor_res']['X'][score_key] = factor_scores.copy()
     
-    ## create & write to dataset_name folder
-    os.makedirs(os.path.join('data', 'results', 'tensor', dataset_name), exist_ok=True)
-    factor_scores.to_csv(os.path.join('data', 'results', 'tensor', dataset_name, f'{score_key}.csv'))    
+    ## write to dataset_name folder
+    factor_scores.to_csv(os.path.join(output_folder, f'{score_key}.csv'))    
     
     adata.uns['tensor_res']['X_0'][score_key] = tensor.factors['Contexts'].values
     adata.uns['tensor_res']['y_0'][score_key] = _encode_y(y)
     
     gc.collect()
-
-
-# def run_classifier(adata, dataset_name, n_estimators=100):
-#     """
-#     Run a Random Forest classifier on the given data and return performance metrics.
-#     """
-#     # TODO: avoid iterations over methods later on
-#     score_keys = adata.uns['mofa_res']['X'].keys()
-    
-#     evaluate = []
-    
-#     n_samples = adata.obs[adata.uns['sample_key']].nunique()
-    
-#     random_states = range(0, 5)
-    
-#     for state in random_states:
-    
-#         splits = _generate_splits(n_samples, random_state=state)
-    
-#         for index, row in splits.iterrows():
-#             fold = row['fold']
-#             train_index = row['train']
-#             test_index = row['test']
-            
-#             for score_key in score_keys:
-#                 mofa = adata.uns['mofa_res']
-#                 X_m = mofa['X_0'][score_key]
-#                 y_m = mofa['y_0'][score_key]
-
-#                 tensor = adata.uns['tensor_res']
-#                 X_t = tensor['X_0'][score_key]
-#                 y_t = tensor['y_0'][score_key]
-        
-#                 assert all(np.isin(['mofa_res', 'tensor_res'], adata.uns_keys())), 'Run the setup function first.'
-                
-#                 assert X_m.shape[0] == X_t.shape[0], 'mofa and tensor have different number of samples.'
-                
-#                 # Evaluate MOFA
-#                 auroc, tpr, fpr, f1, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
-#                 evaluate.append(_assign_dict(reduction_name='mofa', score_key=score_key, state=state, fold=fold,
-#                                              auroc=auroc, tpr=tpr, fpr=fpr, f1_score=f1, oob_score=oob_score,
-#                                              train_split=train_index, test_split=test_index, test_classes=y_m[test_index]))
-                
-#                 # Evaluate Tensor
-#                 auroc, tpr, fpr, f1, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
-#                 evaluate.append(_assign_dict(reduction_name='tensor', score_key=score_key, state=state, fold=fold,
-#                                              auroc=auroc, tpr=tpr, fpr=fpr, f1_score=f1, oob_score=oob_score,
-#                                              train_split=train_index, test_split=test_index, test_classes=y_m[test_index]))
-#             fold += 1
-            
-#     evaluate = pd.DataFrame(evaluate)
-#     evaluate['dataset'] = dataset_name
-#     adata.uns['evaluate'] = evaluate
-    
-#     evaluate.to_csv(os.path.join('data', 'results', f'{dataset_name}.csv'), index=False)
     
     
 def _run_rf_auc(X, y, train_index, test_index, n_estimators=100):

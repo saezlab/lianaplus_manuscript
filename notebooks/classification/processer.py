@@ -30,7 +30,6 @@ class DatasetHandler:
                 'groupby': None,
                 'sample_key': None,
                 'condition_key': None,
-                'batch_key': None,
                 'min_cells_per_sample': 1000,
                 'sample_zcounts_max': 3,
                 'sample_zcounts_min': -2,
@@ -40,13 +39,13 @@ class DatasetHandler:
                 'change_var_to': None,
                 'conditions_to_keep': None,
                 'organism':'human',
-                'map_path':None
+                'map_path':None,
+                "n_factors":10,
             },
             'kuppe': {
                 'groupby': 'cell_type',
                 'sample_key': 'sample',
                 'condition_key': 'patient_group',
-                'batch_key': 'sex',
                 'use_raw': True,
                 'change_var_to': 'feature_name',
                 'conditions_to_keep': ['ischemic', 'myogenic']
@@ -55,28 +54,25 @@ class DatasetHandler:
                 'groupby': 'celltype',
                 'sample_key': 'Sample_Name',
                 'condition_key': 'Status',
-                'batch_key': 'Sample_Source'
             },
             'reichart': {
                 'groupby':'cell_type',
                 'sample_key':'Sample',
                 'condition_key':'disease',
-                'batch_key':'tissue',
                 'conditions_to_keep':['normal', 'dilated cardiomyopathy'],
                 "map_path":"ensembl_to_symbol.csv",
+                "n_factors":20,
             },
             'velmeshev':{
                 'groupby':'cluster',
-                'sample_key':'individual',
+                'sample_key':'sample',
                 'condition_key':'diagnosis',
-                'batch_key':'sex',
                 "map_path":"ensembl_to_symbol.csv"
             },
             'carraro': {
                 'groupby': 'major',
                 'sample_key': 'orig.ident',
                 'condition_key': 'type',
-                'batch_key': 'lab',
                 'min_cells_per_sample': 700,
             }
         }
@@ -100,7 +96,6 @@ class DatasetHandler:
         self.groupby = dataset_info.get('groupby', defaults['groupby'])
         self.sample_key = dataset_info.get('sample_key', defaults['sample_key'])
         self.condition_key = dataset_info.get('condition_key', defaults['condition_key'])
-        self.batch_key = dataset_info.get('batch_key', defaults['batch_key'])
         self.min_cells_per_sample = dataset_info.get('min_cells_per_sample', defaults['min_cells_per_sample'])
         self.sample_zcounts_max = dataset_info.get('sample_zcounts_max', defaults['sample_zcounts_max'])
         self.sample_zcounts_min = dataset_info.get('sample_zcounts_min', defaults['sample_zcounts_min'])
@@ -110,6 +105,7 @@ class DatasetHandler:
         self.change_var_to = dataset_info.get('change_var_to', defaults['change_var_to'])
         self.conditions_to_keep = dataset_info.get('conditions_to_keep', defaults['conditions_to_keep'])
         self.map_path = dataset_info.get('map_path', defaults['map_path'])
+        self.n_factors = dataset_info.get('n_factors', defaults['n_factors'])
         
         self.all_datasets = self.dataset_params.keys()
     
@@ -201,15 +197,16 @@ class DatasetHandler:
                          score_key=score_key,
                          sample_key=self.sample_key, 
                          condition_key=self.condition_key,
-                         batch_key=self.batch_key,
                          dataset_name=self.dataset_name,
+                         n_factors=self.n_factors,
                          gpu_mode=False) # NOTE: use_gpu is not passed
             
             run_tensor_c2c(adata=adata,
                            score_key=score_key, 
                            sample_key=self.sample_key,
                            condition_key=self.condition_key, 
-                           dataset_name=self.dataset_name, 
+                           dataset_name=self.dataset_name,
+                           n_factors=self.n_factors,
                            use_gpu=use_gpu
                            )
         
@@ -231,7 +228,7 @@ class DatasetHandler:
         
         for state in random_states:
         
-            splits = _generate_splits(n_samples, random_state=state)
+            splits = _generate_splits(n_samples, random_state=state, n_factors=self.n_factors)
         
             for index, row in splits.iterrows():
                 fold = row['fold']

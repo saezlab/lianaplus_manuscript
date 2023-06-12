@@ -56,13 +56,13 @@ class DatasetHandler:
                 'sample_key': 'Sample_Name',
                 'condition_key': 'Status',
                 'batch_key': 'Sample_Source',
+                "map_path":"ensembl_to_symbol.csv",
             },
             'reichart': {
                 'groupby':'cell_type',
                 'sample_key':'Sample',
                 'condition_key':'disease',
                 'batch_key':'Sample_Source',
-                'change_var_to': 'feature_name',
                 'conditions_to_keep':['normal', 'dilated cardiomyopathy']
             },
             'velmeshev':{

@@ -61,7 +61,7 @@ class DatasetHandler:
                 'groupby':'cell_type',
                 'sample_key':'Sample',
                 'condition_key':'disease',
-                'batch_key':'Sample_Source',
+                'batch_key':'sex',
                 'conditions_to_keep':['normal', 'dilated cardiomyopathy'],
                 "map_path":"ensembl_to_symbol.csv",
             },

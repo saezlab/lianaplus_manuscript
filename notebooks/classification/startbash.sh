@@ -13,7 +13,7 @@
 #SBATCH --chdir /net/data.isilon/ag-saez/bq_ddimitrov/Repos/liana2_manuscript/notebooks/classification
 
 ## loop over all datasets
-datasets=("carraro" "kuppe" "habermann" "velmeshev" "reichart")  # List of datasets
+datasets=("reichart" "carraro" "kuppe" "habermann" "velmeshev")  # List of datasets
 
 for dataset in "${datasets[@]}"; do
     echo "Now running dataset: $dataset"

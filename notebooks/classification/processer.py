@@ -62,6 +62,7 @@ class DatasetHandler:
                 'sample_key':'Sample',
                 'condition_key':'disease',
                 'batch_key':'Sample_Source',
+                'change_var_to': 'feature_name',
                 'conditions_to_keep':['normal', 'dilated cardiomyopathy']
             },
             'velmeshev':{

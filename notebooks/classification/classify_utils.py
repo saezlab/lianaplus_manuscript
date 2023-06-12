@@ -55,36 +55,33 @@ def _generate_splits(n_samples, random_state):
     
 
 
-def dim_reduction_pipe(adata, dataset_name, use_gpu=True):    
-    sample_key = adata.uns['sample_key']
-    batch_key = adata.uns['batch_key']
-    condition_key = adata.uns['condition_key']
+# def dim_reduction_pipe(adata, dataset_name, sample_key, condition_key, batch_key, use_gpu=True):    
     
-    # methods to use
-    methods = li.mt.show_methods()
-    # in case a method is missing Magnitude Score, use Specificity Score
-    methods['score_key'] = methods["Magnitude Score"].fillna(methods["Specificity Score"])
-    # remove Geometric Mean	method
-    methods = methods[methods['Method Name'] != 'Geometric Mean']
-    # drop duplicated scores (expr_prod for NATMI & Connectome)
-    methods = methods.drop_duplicates(subset=['Method Name', 'score_key'])
-    methods = methods[['Method Name', 'score_key']]
+#     # methods to use
+#     methods = li.mt.show_methods()
+#     # in case a method is missing Magnitude Score, use Specificity Score
+#     methods['score_key'] = methods["Magnitude Score"].fillna(methods["Specificity Score"])
+#     # remove Geometric Mean	method
+#     methods = methods[methods['Method Name'] != 'Geometric Mean']
+#     # drop duplicated scores (expr_prod for NATMI & Connectome)
+#     methods = methods.drop_duplicates(subset=['Method Name', 'score_key'])
+#     methods = methods[['Method Name', 'score_key']]
     
-    _dict_setup(adata, 'mofa_res')
-    _dict_setup(adata, 'tensor_res')
+#     _dict_setup(adata, 'mofa_res')
+#     _dict_setup(adata, 'tensor_res')
     
-    for score_key in methods['score_key']:
-        print(f"Creating views with: {score_key}")
+#     for score_key in methods['score_key']:
+#         print(f"Creating views with: {score_key}")
 
-        # Note: I should save results - to avoid re-running the same things
-        run_mofatalk(adata=adata, score_key=score_key, sample_key=sample_key, 
-                     condition_key=condition_key, batch_key=batch_key, dataset_name=dataset_name,
-                     gpu_mode=False) # NOTE: use_gpu is not passed
+#         # Note: I should save results - to avoid re-running the same things
+#         run_mofatalk(adata=adata, score_key=score_key, sample_key=sample_key, 
+#                      condition_key=condition_key, batch_key=batch_key, dataset_name=dataset_name,
+#                      gpu_mode=False) # NOTE: use_gpu is not passed
         
-        run_tensor_c2c(adata=adata, score_key=score_key, sample_key=sample_key,
-                       condition_key=condition_key, dataset_name=dataset_name, use_gpu=use_gpu)
+#         run_tensor_c2c(adata=adata, score_key=score_key, sample_key=sample_key,
+#                        condition_key=condition_key, dataset_name=dataset_name, use_gpu=use_gpu)
     
-    adata.write(os.path.join('data', 'results', f'{dataset_name}_dimred.h5ad'))
+#     adata.write(os.path.join('data', 'results', f'{dataset_name}_dimred.h5ad'))
 
 
 def run_mofatalk(adata, score_key, sample_key, condition_key, batch_key, dataset_name, gpu_mode=False):
@@ -189,59 +186,59 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset_name, us
     gc.collect()
 
 
-def run_classifier(adata, dataset_name, n_estimators=100):
-    """
-    Run a Random Forest classifier on the given data and return performance metrics.
-    """
-    # TODO: avoid iterations over methods later on
-    score_keys = adata.uns['mofa_res']['X'].keys()
+# def run_classifier(adata, dataset_name, n_estimators=100):
+#     """
+#     Run a Random Forest classifier on the given data and return performance metrics.
+#     """
+#     # TODO: avoid iterations over methods later on
+#     score_keys = adata.uns['mofa_res']['X'].keys()
     
-    evaluate = []
+#     evaluate = []
     
-    n_samples = adata.obs[adata.uns['sample_key']].nunique()
+#     n_samples = adata.obs[adata.uns['sample_key']].nunique()
     
-    random_states = range(0, 5)
+#     random_states = range(0, 5)
     
-    for state in random_states:
+#     for state in random_states:
     
-        splits = _generate_splits(n_samples, random_state=state)
+#         splits = _generate_splits(n_samples, random_state=state)
     
-        for index, row in splits.iterrows():
-            fold = row['fold']
-            train_index = row['train']
-            test_index = row['test']
+#         for index, row in splits.iterrows():
+#             fold = row['fold']
+#             train_index = row['train']
+#             test_index = row['test']
             
-            for score_key in score_keys:
-                mofa = adata.uns['mofa_res']
-                X_m = mofa['X_0'][score_key]
-                y_m = mofa['y_0'][score_key]
+#             for score_key in score_keys:
+#                 mofa = adata.uns['mofa_res']
+#                 X_m = mofa['X_0'][score_key]
+#                 y_m = mofa['y_0'][score_key]
 
-                tensor = adata.uns['tensor_res']
-                X_t = tensor['X_0'][score_key]
-                y_t = tensor['y_0'][score_key]
+#                 tensor = adata.uns['tensor_res']
+#                 X_t = tensor['X_0'][score_key]
+#                 y_t = tensor['y_0'][score_key]
         
-                assert all(np.isin(['mofa_res', 'tensor_res'], adata.uns_keys())), 'Run the setup function first.'
+#                 assert all(np.isin(['mofa_res', 'tensor_res'], adata.uns_keys())), 'Run the setup function first.'
                 
-                assert X_m.shape[0] == X_t.shape[0], 'mofa and tensor have different number of samples.'
+#                 assert X_m.shape[0] == X_t.shape[0], 'mofa and tensor have different number of samples.'
                 
-                # Evaluate MOFA
-                auroc, tpr, fpr, f1, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
-                evaluate.append(_assign_dict(reduction_name='mofa', score_key=score_key, state=state, fold=fold,
-                                             auroc=auroc, tpr=tpr, fpr=fpr, f1_score=f1, oob_score=oob_score,
-                                             train_split=train_index, test_split=test_index, test_classes=y_m[test_index]))
+#                 # Evaluate MOFA
+#                 auroc, tpr, fpr, f1, oob_score = _run_rf_auc(X_m, y_m, train_index, test_index, n_estimators=n_estimators)
+#                 evaluate.append(_assign_dict(reduction_name='mofa', score_key=score_key, state=state, fold=fold,
+#                                              auroc=auroc, tpr=tpr, fpr=fpr, f1_score=f1, oob_score=oob_score,
+#                                              train_split=train_index, test_split=test_index, test_classes=y_m[test_index]))
                 
-                # Evaluate Tensor
-                auroc, tpr, fpr, f1, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
-                evaluate.append(_assign_dict(reduction_name='tensor', score_key=score_key, state=state, fold=fold,
-                                             auroc=auroc, tpr=tpr, fpr=fpr, f1_score=f1, oob_score=oob_score,
-                                             train_split=train_index, test_split=test_index, test_classes=y_m[test_index]))
-            fold += 1
+#                 # Evaluate Tensor
+#                 auroc, tpr, fpr, f1, oob_score = _run_rf_auc(X_t, y_t, train_index, test_index, n_estimators=n_estimators)
+#                 evaluate.append(_assign_dict(reduction_name='tensor', score_key=score_key, state=state, fold=fold,
+#                                              auroc=auroc, tpr=tpr, fpr=fpr, f1_score=f1, oob_score=oob_score,
+#                                              train_split=train_index, test_split=test_index, test_classes=y_m[test_index]))
+#             fold += 1
             
-    evaluate = pd.DataFrame(evaluate)
-    evaluate['dataset'] = dataset_name
-    adata.uns['evaluate'] = evaluate
+#     evaluate = pd.DataFrame(evaluate)
+#     evaluate['dataset'] = dataset_name
+#     adata.uns['evaluate'] = evaluate
     
-    evaluate.to_csv(os.path.join('data', 'results', f'{dataset_name}.csv'), index=False)
+#     evaluate.to_csv(os.path.join('data', 'results', f'{dataset_name}.csv'), index=False)
     
     
 def _run_rf_auc(X, y, train_index, test_index, n_estimators=100):

@@ -3,7 +3,6 @@
 #SBATCH -N 1
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=40000
-#SBATCH  --mem-per-cpu 20000
 #SBATCH --cpus-per-task 2
 #SBATCH --time=5:30:00
 #SBATCH --job-name="liana2"

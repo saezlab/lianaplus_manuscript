@@ -2,7 +2,6 @@ import os
 import pandas as pd
 
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression # TODO: replace with RF
 
 from utils import load_prep_slide, _evaluate_regression, _get_function_names
 
@@ -16,11 +15,9 @@ function_names = _get_function_names()
 
 
 # Initialize the Random Forest Regressor with default parameters
-# regressor = RandomForestRegressor(n_estimators=100, oob_score=True, n_jobs=-1, random_state=1337)
-regressor = LinearRegression() # TODO: replace with RF
+regressor = RandomForestRegressor(n_estimators=100, oob_score=True, n_jobs=-1, random_state=1337)
 
 results = []
-
 
 for dataset_name in dataset_names:
 

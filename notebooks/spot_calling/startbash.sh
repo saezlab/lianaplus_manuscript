@@ -11,4 +11,4 @@
 #SBATCH --requeue
 #SBATCH --chdir /net/data.isilon/ag-saez/bq_ddimitrov/Repos/liana2_manuscript/notebooks/spot_calling
 
-python $1 $2
+python $1

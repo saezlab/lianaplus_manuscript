@@ -42,6 +42,9 @@ for dataset_name in dataset_names:
         # evaluate
         eval_df = _evaluate_regression(X, y, dataset_name, function_name, regressor)
         results.append(eval_df)
-        
+    
+    # save preliminary results    
+    pd.concat(results).to_csv('results.csv', index=False)
+
 results = pd.concat(results)
 results.to_csv('results.csv', index=False)

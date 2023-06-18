@@ -90,8 +90,8 @@ def load_prep_slide(path, slide):
 
 
 def _evaluate_regression(X, y, dataset_name, function_name, regressor):
-    # Create a KFold cross-validator with 10 splits
-    kfold = KFold(n_splits=10, shuffle=True, random_state=1337)
+    # Create a KFold cross-validator with 5 splits
+    kfold = KFold(n_splits=5, shuffle=True, random_state=1337)
 
     # Initialize lists to store R2 scores and RMSE values
     r2_scores = []
@@ -118,10 +118,10 @@ def _evaluate_regression(X, y, dataset_name, function_name, regressor):
         rmse_scores.append(rmse)
         
         # train & test index
-        print(f"rain_index: {train_index}")
+        print(f"train_index: {train_index}")
         print(f"test_index: {test_index}")
         
-    eval_df = pd.DataFrame({'dataset':dataset_name.split('.')[0], 'score_key':function_name, 'r2': r2_scores, 'rmse': rmse_scores})
+    eval_df = pd.DataFrame({'dataset_name':dataset_name.split('.')[0], 'function_name':function_name, 'r2': r2_scores, 'rmse': rmse_scores})
 
     return eval_df
 

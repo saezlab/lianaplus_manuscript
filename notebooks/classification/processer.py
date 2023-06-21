@@ -67,6 +67,7 @@ class DatasetHandler:
                 'groupby':'cluster',
                 'sample_key':'sample',
                 'condition_key':'diagnosis',
+                # the mapping table was taken from this dataset's .var
                 "map_path":"ensembl_to_symbol.csv"
             },
             'carraro': {

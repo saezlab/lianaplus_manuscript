@@ -76,15 +76,21 @@ def run_rf_auc(adata, dataset_name):
 
 
 
-def load_prep_slide(path, slide):
+def load_prep_slide(path, slide, add_sample_name=False, min_genes = 400):
     adata = sc.read_h5ad(os.path.join(path, slide))
     
-    sc.pp.filter_cells(adata, min_genes=400)
+    if add_sample_name:
+        indeces = [f"{slide.split('.')[0]}-{i}" for i in adata.obs.index]
+        adata.obs.index = indeces
+        adata.obsm['compositions'].index = indeces
+    
+    sc.pp.filter_cells(adata, min_genes=min_genes)
     sc.pp.filter_genes(adata, min_cells=5)
+    
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
     
-    li.mt.spatial_neighbors(adata, bandwidth=100, cutoff=0.1)
+    li.mt.spatial_neighbors(adata, bandwidth=100, cutoff=0.1, set_diag=True)
     
     return adata
 

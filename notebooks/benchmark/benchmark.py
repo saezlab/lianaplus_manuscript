@@ -5,6 +5,7 @@ from scipy.sparse import csr_matrix
 
 import scanpy as sc
 import liana as li
+import squidpy as sq
 
 from itertools import product
 
@@ -30,7 +31,8 @@ def _sample_anndata(sparsity = 0.90, n_ct = 10, n_vars = 2000, n_obs = 1000, see
     x = rng.integers(low=0, high=5000, size=adata.shape[0])
     y = rng.integers(low=0, high=5000, size=adata.shape[0])
     adata.obsm['spatial'] = np.array([x, y]).T
-    li.mt.spatial_neighbors(adata, bandwidth=100, cutoff=0.1)
+    
+    sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True)
     
     # assign cell types
     ct = rng.choice([f"CT{i:d}" for i in range(n_ct)], size=(adata.n_obs,))
@@ -43,6 +45,10 @@ def _sample_anndata(sparsity = 0.90, n_ct = 10, n_vars = 2000, n_obs = 1000, see
 def _sample_resource(adata, n_lrs = 3000, seed=1337):
     resource = pd.DataFrame(product(adata.var_names, adata.var_names)).rename(columns={0: "ligand", 1: "receptor"})
     # pick n_lrs random rows
+    
+    # remove same ligand; same receptor
+    resource = resource[resource["ligand"] != resource["receptor"]]
+    
     resource = resource.sample(n_lrs, replace=False, random_state=seed)
     
     return resource

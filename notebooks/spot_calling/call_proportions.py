@@ -3,7 +3,7 @@ import pandas as pd
 
 from sklearn.ensemble import RandomForestRegressor
 
-from utils import load_prep_slide, _evaluate_regression, _get_function_names
+from utils import load_prep_slide, _evaluate_regression
 
 import liana as li
 
@@ -11,7 +11,7 @@ data_dir = os.path.join('..', '..', 'data', 'heart_visium')
 
 # scan names of all datasets
 dataset_names = [f for f in os.listdir(data_dir) if f.endswith('.h5ad')]
-function_names = _get_function_names()
+function_names = function_names = li.mt.bivar.show_functions()['name'].values
 
 
 # Initialize the Random Forest Regressor with default parameters
@@ -37,7 +37,7 @@ for dataset_name in dataset_names:
         print(f'Running {function_name}')
         
         y = adata.obsm['compositions'].values
-        X = adata.obsm['local_scores'].values
+        X = adata.obsm['local_scores'].X
         
         # evaluate
         eval_df = _evaluate_regression(X, y, dataset_name, function_name, regressor)

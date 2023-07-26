@@ -90,7 +90,7 @@ def load_prep_slide(path, slide, add_sample_name=False, min_genes = 400):
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
     
-    li.ut.spatial_neighbors(adata, bandwidth=100, cutoff=0.1, set_diag=True)
+    li.ut.spatial_neighbors(adata, bandwidth=200, cutoff=0.1, set_diag=True)
     
     return adata
 

@@ -36,7 +36,7 @@ def _get_assay(adata, function_name):
     if isinstance(adata, MuData):
         X = adata.mod[function_name].X
     else:
-        X = adata.obsm[function_name].values
+        X = adata.obsm[function_name].X
         
     return X
         
@@ -130,9 +130,3 @@ def _evaluate_regression(X, y, dataset_name, function_name, regressor):
     eval_df = pd.DataFrame({'dataset_name':dataset_name.split('.')[0], 'function_name':function_name, 'r2': r2_scores, 'rmse': rmse_scores})
 
     return eval_df
-
-
-def _get_function_names():
-    function_names = li.mt.sp.show_functions()['name']
-    function_names = list(function_names[~function_names.str.contains('masked')]) + ['masked_spearman']
-    return function_names

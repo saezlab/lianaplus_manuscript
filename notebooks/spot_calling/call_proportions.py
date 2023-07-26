@@ -30,7 +30,7 @@ for dataset_name in dataset_names:
         li.mt.lr_bivar(adata,
                        function_name=function_name,
                        expr_prop=0.1,
-                       pvalue_method=None, 
+                       n_perms=None, 
                        use_raw=False,
                        )
         

@@ -74,8 +74,6 @@ def run_rf_auc(adata, dataset_name):
     adata.uns['performance'] = performance
 
 
-
-
 def load_prep_slide(path, slide, add_sample_name=False, min_genes = 400):
     adata = sc.read_h5ad(os.path.join(path, slide))
     
@@ -90,7 +88,7 @@ def load_prep_slide(path, slide, add_sample_name=False, min_genes = 400):
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
     
-    li.ut.spatial_neighbors(adata, bandwidth=200, cutoff=0.1, set_diag=True)
+    li.ut.spatial_neighbors(adata, bandwidth=150, cutoff=0.1, set_diag=True)
     
     return adata
 
@@ -127,6 +125,8 @@ def _evaluate_regression(X, y, dataset_name, function_name, regressor):
         print(f"train_index: {train_index}")
         print(f"test_index: {test_index}")
         
-    eval_df = pd.DataFrame({'dataset_name':dataset_name.split('.')[0], 'function_name':function_name, 'r2': r2_scores, 'rmse': rmse_scores})
+    eval_df = pd.DataFrame({'dataset_name':dataset_name.split('.')[0],
+                            'function_name':function_name, 
+                            'r2': r2_scores, 'rmse': rmse_scores})
 
     return eval_df

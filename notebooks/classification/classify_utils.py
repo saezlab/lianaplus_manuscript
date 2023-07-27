@@ -80,7 +80,7 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, dataset_name, n_fa
     y = mdata.obs[condition_key]
     
     # save results
-    factor_scores = li.multi.get_factor_scores(mdata, obsm_key='X_mofa').copy()
+    factor_scores = li.ut.get_factor_scores(mdata, obsm_key='X_mofa').copy()
     adata.uns['mofa_res']['X'][score_key] = factor_scores
     
     ## create & write to dataset_name folder

@@ -2,8 +2,8 @@
 #SBATCH -p gpu
 #SBATCH -N 1
 #SBATCH --gpus-per-node=1
-#SBATCH --mem=100000
-#SBATCH --time=11:30:00
+#SBATCH --mem=200000
+#SBATCH --time=3:30:00
 #SBATCH --job-name="liana2"
 #SBATCH --output=liana2.out
 #SBATCH --mail-user=daniel.dimitrov@uni-heidelberg.de

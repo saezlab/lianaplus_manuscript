@@ -7,6 +7,7 @@ The repository is organized as follows:
 
 See `notebooks\README.md` for all dataset and analysis descriptions.
 
+`environment.yml` contains the conda environment used to run the notebooks.
 
 ## Cite LIANA+:
 

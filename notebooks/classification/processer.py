@@ -6,7 +6,7 @@ from pandas import read_csv
 from scipy.sparse import csr_matrix, issparse
 import liana as li
 
-from classify_utils import (
+from .classify_utils import (
     _dict_setup,
     run_mofatalk,
     run_tensor_c2c,
@@ -15,7 +15,7 @@ from classify_utils import (
     _generate_splits
     )
 
-from prep_utils import (
+from .prep_utils import (
     filter_samples,
     filter_celltypes,
     check_group_balance,

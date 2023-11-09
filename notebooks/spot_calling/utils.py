@@ -74,7 +74,7 @@ def run_rf_auc(adata, dataset_name):
     adata.uns['performance'] = performance
 
 
-def load_prep_slide(path, slide, add_sample_name=False, min_genes = 400):
+def load_prep_slide(path, slide, add_sample_name=False, min_genes = 400, bandwidth=150, cutoff=0.1, set_diag=True, **kwargs):
     adata = sc.read_h5ad(os.path.join(path, slide))
     
     if add_sample_name:
@@ -88,7 +88,7 @@ def load_prep_slide(path, slide, add_sample_name=False, min_genes = 400):
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
     
-    li.ut.spatial_neighbors(adata, bandwidth=150, cutoff=0.1, set_diag=True)
+    li.ut.spatial_neighbors(adata, bandwidth=bandwidth, cutoff=cutoff, set_diag=set_diag, **kwargs)
     
     return adata
 

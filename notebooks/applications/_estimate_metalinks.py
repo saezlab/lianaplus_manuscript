@@ -5,7 +5,7 @@ from pandas import read_csv, DataFrame, concat
 from liana.utils import obsm_to_adata
 
 
-def estimate_metalinks(adata, resource, met_net=None, consider_transport = True, **kwargs):
+def estimate_metalinks(adata, resource, met_net=None, consider_transport = True, use_raw=False, **kwargs):
     """
     Estimate metalinks from anndata object.
 
@@ -34,14 +34,14 @@ def estimate_metalinks(adata, resource, met_net=None, consider_transport = True,
     
     net = met_net[met_net['Type'] == 'met_est'].drop_duplicates(['HMDB', 'Symbol']).copy()
     
-    dc.run_ulm(adata, net = net, use_raw = False, source = 'HMDB', target = 'Symbol', weight = 'Direction', **kwargs)
+    dc.run_ulm(adata, net = net, source = 'HMDB', target = 'Symbol', weight = 'Direction', use_raw=use_raw, **kwargs)
     met_est = adata.obsm['ulm_estimate']
 
     if consider_transport:
 
         net = met_net[met_net['Type'] == 'export'].drop_duplicates(['HMDB', 'Symbol', 'Direction'])
 
-        dc.run_wmean(adata, net, source = 'HMDB', target = 'Symbol', weight = 'Direction', times=0, min_n=3)
+        dc.run_wmean(adata, net, source = 'HMDB', target = 'Symbol', weight = 'Direction', times=0, min_n=3, use_raw=use_raw)
         
         out_est = adata.obsm['wmean_estimate']
         intersect = np.intersect1d(met_est.columns, out_est.columns)

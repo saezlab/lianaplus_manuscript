@@ -11,7 +11,7 @@ from mudata import MuData
 import liana as li
 
 
-clf = RandomForestClassifier(n_estimators=100, random_state=1337, oob_score=True)
+clf = RandomForestClassifier(n_estimators=100, random_state=1337, oob_score=True, n_jobs=-1)
 
 def _evaluate_classifier(X, y, train_index, test_index):
     X_train, X_test = X[train_index], X[test_index]

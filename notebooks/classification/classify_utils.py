@@ -60,8 +60,8 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, dataset_name, n_fa
                                   inverse_fun=INVERSE_FUN,
                                   obs_keys=[condition_key], # add those to mdata.obs
                                   lr_prop = 0.33, # minimum required proportion of samples to keep an LR
-                                  lrs_per_sample = 5, # minimum number of interactions to keep a sample in a specific view
-                                  lrs_per_view = 15, # minimum number of interactions to keep a view
+                                  lrs_per_sample = 3, # minimum number of interactions to keep a sample in a specific view
+                                  lrs_per_view = 10, # minimum number of interactions to keep a view
                                   samples_per_view = 5, # minimum number of samples to keep a view
                                   min_variance = 0, # minimum variance to keep an interaction
                                   lr_fill = 0, # fill missing LR values across samples with this
@@ -103,11 +103,11 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset_name, n_
         device = 'cpu'
     
     tensor = li.multi.to_tensor_c2c(adata,
-                                    sample_key=sample_key,
-                                    inverse_fun=INVERSE_FUN,
-                                    score_key=score_key, # can be any score from liana
+                                    sample_key = sample_key,
+                                    inverse_fun = INVERSE_FUN,
+                                    score_key = score_key, # can be any score from liana
                                     how='outer', # how to join the samples
-                                    non_expressed_fill=0, # value to fill non-expressed interactions
+                                    non_expressed_fill = 0, # value to fill non-expressed interactions
                                     outer_fraction = 0.33, 
                                     )
     

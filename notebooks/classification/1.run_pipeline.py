@@ -1,7 +1,13 @@
-import sys
+import os
+import warnings
 from processer import DatasetHandler
+warnings.filterwarnings('ignore') # silence endless anndata spam
 
-def main(dataset_name, use_gpu=True):
+file_path = os.path.dirname(os.path.abspath(__file__))
+datasets = ["carraro", "velmeshev" ,"reichart", "kuppe", "habermann"]
+
+def run_classification(dataset_name, use_gpu=True):
+    os.chdir(file_path)
     # Create an instance of DatasetHandler
     handler = DatasetHandler(dataset_name=dataset_name)
     
@@ -13,13 +19,8 @@ def main(dataset_name, use_gpu=True):
     
     # Run classifier on the reduced dataset using run_classifier function
     handler.run_classifier(adata)
-    
     print(adata.uns['evaluate'].head())
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Please provide the dataset name as a command-line argument.")
-        sys.exit(1)
-    
-    dataset_name = sys.argv[1]
-    main(dataset_name)
+if __name__ == "__main__":    
+    for dataset_name in datasets:
+        run_classification(dataset_name)

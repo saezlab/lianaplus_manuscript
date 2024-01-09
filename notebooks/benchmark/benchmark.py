@@ -4,7 +4,6 @@ import anndata as ad
 from scipy.sparse import csr_matrix
 
 import scanpy as sc
-import liana as li
 import squidpy as sq
 
 from itertools import product

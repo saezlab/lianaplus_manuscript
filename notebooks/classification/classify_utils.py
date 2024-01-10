@@ -65,7 +65,8 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, dataset_name, n_fa
                                   samples_per_view = 5, # minimum number of samples to keep a view
                                   min_variance = 0, # minimum variance to keep an interaction
                                   lr_fill = 0, # fill missing LR values across samples with this
-                                  verbose=True
+                                  verbose=True,
+                                  uns_key=score_key
                                   ).copy()
     
     mu.tl.mofa(mdata,
@@ -109,6 +110,7 @@ def run_tensor_c2c(adata, score_key, sample_key, condition_key, dataset_name, n_
                                     how='outer', # how to join the samples
                                     non_expressed_fill = 0, # value to fill non-expressed interactions
                                     outer_fraction = 0.33, 
+                                    uns_key=score_key
                                     )
     
     context_dict = adata.obs[[sample_key, condition_key]].drop_duplicates()
@@ -176,6 +178,7 @@ def _run_rf_auc(X, y, train_index, test_index, n_estimators=100):
     f1 = f1_score(y_test, y_pred, average='weighted')
     
     return auroc, tpr, fpr, f1, oob_score
+
 
 def _assign_dict(reduction_name, score_key, state, fold, auroc, tpr, fpr, f1_score, oob_score, train_split, test_split, test_classes):
     return {'reduction_name': reduction_name,

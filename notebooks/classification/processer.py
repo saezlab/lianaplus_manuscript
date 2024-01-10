@@ -6,7 +6,10 @@ from pandas import read_csv
 from scipy.sparse import csr_matrix, issparse
 import liana as li
 
-from .classify_utils import (
+from liana.method import cellphonedb, connectome, cellchat, scseqcomm, singlecellsignalr, natmi, logfc, rank_aggregate, geometric_mean
+methods = [cellphonedb, connectome, cellchat, scseqcomm, singlecellsignalr, natmi, logfc, rank_aggregate, geometric_mean]
+
+from classify_utils import (
     _dict_setup,
     run_mofatalk,
     run_tensor_c2c,
@@ -15,7 +18,7 @@ from .classify_utils import (
     _generate_splits
     )
 
-from .prep_utils import (
+from prep_utils import (
     filter_samples,
     filter_celltypes,
     check_group_balance,
@@ -164,12 +167,18 @@ class DatasetHandler:
         sc.pp.log1p(adata)
         
         # Run LIANA (NOTE: should be by method in a sep function)
-        li.mt.rank_aggregate.by_sample(adata, 
-                                       groupby=self.groupby,
-                                       use_raw=False,
-                                       sample_key=self.sample_key,
-                                       verbose=True,
-                                       n_perms=None)
+        for method in methods:
+            score_key = method.magnitude if method.magnitude is not None else method.specificity
+            
+            adata.uns[score_key] = \
+                method.by_sample(adata, 
+                                 groupby=self.groupby,
+                                 use_raw=False,
+                                 sample_key=self.sample_key,
+                                 verbose=True,
+                                 n_perms=None,
+                                 inplace=False
+                                 )
         
         adata.write_h5ad(os.path.join('data', 'interim', f"{self.dataset_name}_processed.h5ad"))
         
@@ -178,19 +187,17 @@ class DatasetHandler:
     def dim_reduction_pipe(self, adata, use_gpu=True):    
     
         # methods to use
-        methods = li.mt.show_methods()
+        scores = li.mt.show_methods()
         # in case a method is missing Magnitude Score, use Specificity Score
-        methods['score_key'] = methods["Magnitude Score"].fillna(methods["Specificity Score"])
-        # remove Geometric Mean	method
-        methods = methods[methods['Method Name'] != 'Geometric Mean']
+        scores['score_key'] = scores["Magnitude Score"].fillna(scores["Specificity Score"])
         # drop duplicated scores (expr_prod for NATMI & Connectome)
-        methods = methods.drop_duplicates(subset=['Method Name', 'score_key'])
-        methods = methods[['Method Name', 'score_key']]
+        scores = scores.drop_duplicates(subset=['Method Name', 'score_key'])
+        scores = scores[['Method Name', 'score_key']]
         
         _dict_setup(adata, 'mofa_res')
         _dict_setup(adata, 'tensor_res')
         
-        for score_key in methods['score_key']:
+        for score_key in scores['score_key']:
             print(f"Creating views with: {score_key}")
 
             # Note: I should save results - to avoid re-running the same things

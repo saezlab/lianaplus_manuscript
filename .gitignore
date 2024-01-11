@@ -110,6 +110,20 @@ ENV/
 env.bak/
 venv.bak/
 
+# Data, random outputs & figs
+data/*
+*.pdf
+*.h5ad
+*.h5
+*.hdf5
+*.csv
+*.png
+*.jpg
+*.tif
+*.json
+*.gz
+*.xlsx
+
 # Spyder project settings
 .spyderproject
 .spyproject

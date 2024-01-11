@@ -43,7 +43,7 @@ for dataset_name in dataset_names:
         results.append(eval_df)
     
     # save preliminary results    
-    pd.concat(results).to_csv(os.path.join(file_path, 'results.csv'), index=False)
+    pd.concat(results).to_csv(os.path.join(file_path, 'regression_results.csv'), index=False)
 
 results = pd.concat(results)
-results.to_csv(os.path.join(file_path, 'results.csv'), index=False)
+results.to_csv(os.path.join(file_path, 'regression_results.csv'), index=False)

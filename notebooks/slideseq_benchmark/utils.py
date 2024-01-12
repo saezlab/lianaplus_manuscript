@@ -3,8 +3,8 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from decoupler import p_adjust_fdr
 from anndata import AnnData
-from sklearn.metrics import roc_curve, roc_auc_score
-
+from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, auc
+from matplotlib import pyplot as plt
 
 def odds_ratio(gt, score_key, top_prop=0.05):
     # Join benchmark (assumed truth) and ccc results
@@ -91,3 +91,26 @@ def calc_auroc(gt, score_key, show_plot=True):
         plot_roc(fpr, tpr, auroc, score_key=score_key)
 
     return auroc
+
+def calc_auprc(gt, score_key, show_plot=True):
+    y_true, y_scores = gt['truth'], gt[score_key]
+
+    # Calculate Precision-Recall Curve and AUPRC
+    precision, recall, _ = precision_recall_curve(y_true, y_scores)
+    auprc = auc(recall, precision)
+    
+    if show_plot:
+        plot_precision_recall(recall, precision, auprc, score_key=score_key)
+
+    return auprc
+
+def plot_precision_recall(recall, precision, auprc, score_key=''):
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    plt.plot(recall, precision, label=f'Precision-Recall curve (area = {auprc:.2f})')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title(f'Precision-Recall Curve for {score_key}')
+    plt.legend(loc="lower left")
+    plt.show()

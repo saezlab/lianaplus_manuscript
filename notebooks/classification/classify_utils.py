@@ -17,7 +17,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold
 
 N_SPLITS = 3
-INVERSE_FUN = lambda x: -np.log2(x)
+INVERSE_FUN = lambda x: -np.log10(x)
 
 # TODO: run method -> classify; next method (not loop over all methods)
 
@@ -61,7 +61,7 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, dataset_name, n_fa
                                   obs_keys=[condition_key], # add those to mdata.obs
                                   lr_prop = 0.33, # minimum required proportion of samples to keep an LR
                                   lrs_per_sample = 3, # minimum number of interactions to keep a sample in a specific view
-                                  lrs_per_view = 10, # minimum number of interactions to keep a view
+                                  lrs_per_view = 15, # minimum number of interactions to keep a view
                                   samples_per_view = 5, # minimum number of samples to keep a view
                                   min_variance = 0, # minimum variance to keep an interaction
                                   lr_fill = 0, # fill missing LR values across samples with this

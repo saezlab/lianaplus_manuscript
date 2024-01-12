@@ -168,7 +168,7 @@ def _run_rf_auc(X, y, train_index, test_index, n_estimators=100):
     
     oob_score = clf.oob_score_
 
-    # NOTE: I'm using probabilities for AUC (more nuanced than binary predictions)
+    # NOTE: I'm using probabilities for AUC
     y_prob = clf.predict_proba(X_test)[:, 1]
 
     fpr, tpr, _ = roc_curve(y_test, y_prob)

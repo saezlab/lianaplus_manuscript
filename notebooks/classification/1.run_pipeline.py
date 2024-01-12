@@ -12,9 +12,9 @@ def run_classification(dataset_name, use_gpu=True):
     handler = DatasetHandler(dataset_name=dataset_name)
     
     # Process the dataset
-    # adata = handler.process_dataset()
-    import scanpy as sc
-    adata = sc.read_h5ad(os.path.join('data', 'interim', f'{dataset_name}_processed.h5ad'))
+    adata = handler.process_dataset()
+    # import scanpy as sc
+    # adata = sc.read_h5ad(os.path.join('data', 'interim', f'{dataset_name}_processed.h5ad'))
     
     # Perform dimensionality reduction using dim_reduction_pipe function
     handler.dim_reduction_pipe(adata, use_gpu=use_gpu)

@@ -3,8 +3,65 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from decoupler import p_adjust_fdr
 from anndata import AnnData
-from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, auc
+from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, auc,  f1_score
+
 from matplotlib import pyplot as plt
+import seaborn as sns
+import matplotlib.patches as mpatches
+
+def plot_method_comparison(res, metric, baseline=None, ymin=0, ymax=1):
+    # Set the figure size
+    plt.figure(figsize=(7, 6))
+
+    # Create a color palette
+    palette = sns.color_palette("Set1", n_colors=res['Method'].nunique())
+
+    # Plot each 'Method' group with a different color
+    for i, method in enumerate(res['Method'].unique()):
+        subset = res[res['Method'] == method]
+        sns.boxplot(x='Score', y=metric, data=subset, color=palette[i], boxprops=dict(alpha=.9))
+
+    # Plot the outlines without filling color
+    sns.boxplot(x='Score', y=metric, data=res, showcaps=False, boxprops=dict(facecolor='None'),
+                showfliers=False, whiskerprops=dict(color='None'))
+
+    # Set the y-axis labels to two decimals
+    plt.gca().set_yticklabels(['{:.2f}'.format(x) for x in plt.gca().get_yticks()])
+
+    # Draw a horizontal line at y=0.50
+    if baseline is not None:
+        plt.axhline(y=baseline, color='red', linestyle='dashed', linewidth=1.5)
+
+    # Rotate the x-axis labels
+    plt.xticks(rotation=90)
+
+    # Remove the title and subplot title
+    plt.title('')
+    plt.suptitle('')
+
+    method_names = res['Method'].unique()
+    colors = plt.cm.Set1(range(len(method_names)))
+
+    # Create a list of patches for the legend
+    legend_patches = [mpatches.Patch(color=colors[i], label=method) for i, method in enumerate(method_names)]
+    plt.legend(handles=legend_patches, title='Method', bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    
+    # set y axis limits
+    plt.ylim(ymin=0, ymax=1)
+
+    # Tight layout often improves the spacing between subplots
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
+def calc_weighted_f1(gt, score_key):
+    y_true, y_scores = gt['truth'], gt[score_key]
+
+    weighted_f1 = f1_score(y_true, y_scores, average='weighted')
+    
+    return weighted_f1
+
 
 def odds_ratio(gt, score_key, top_prop=0.05):
     # Join benchmark (assumed truth) and ccc results

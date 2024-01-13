@@ -107,8 +107,8 @@ def onehot_groupby(adata, groupby='cell_type'):
     return ctdata
     
     
-def join_pred_truth(lr_res, lrdata, cpdata, lr_cols=['ligand', 'receptor'], ct_cols=['source', 'target']):
-
+def join_pred_truth(lr_res, lrdata, cpdata, lr_cols=['ligand_complex', 'receptor_complex'], ct_cols=['source', 'target']):
+    lr_res = lr_res.copy()
     lr_truth = lrdata.var
     lr_truth['lr_truth'] = ((p_adjust_fdr((lr_truth['morans_pvals']) <= 0.05)) * (lr_truth['morans_r'] > 0)).astype(np.int8)
     lr_truth = lr_truth[lr_cols + ['lr_truth']]
@@ -117,11 +117,10 @@ def join_pred_truth(lr_res, lrdata, cpdata, lr_cols=['ligand', 'receptor'], ct_c
     ct_truth['ct_truth'] = (p_adjust_fdr((ct_truth['morans_pvals']) <= 0.05) * (ct_truth['morans_r'] > 0)).astype(np.int8)
     ct_truth = ct_truth[ct_cols + ['ct_truth']]
 
-    gt = lr_res.merge(lr_truth, left_on=['ligand_complex', 'receptor_complex'], right_on=lr_cols, how='inner')
+    gt = lr_res.merge(lr_truth, left_on=lr_cols, right_on=lr_cols, how='inner')
     gt = gt.merge(ct_truth, left_on=ct_cols, right_on=ct_cols, how='inner')
 
     gt['truth'] = gt['lr_truth'] * gt['ct_truth']
-    print(f"ratio: {gt['truth'].sum() / gt.shape[0]}, shape:{gt.shape}")
     
     return gt
 

@@ -3,7 +3,14 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from decoupler import p_adjust_fdr
 from anndata import AnnData
-from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, auc,  f1_score
+from sklearn.metrics import (roc_curve, 
+                             roc_auc_score,
+                             precision_recall_curve,
+                             auc,
+                             f1_score,
+                             balanced_accuracy_score,
+                             precision_score,
+                             recall_score)
 
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -107,7 +114,7 @@ def onehot_groupby(adata, groupby='cell_type'):
     return ctdata
     
     
-def join_pred_truth(lr_res, lrdata, cpdata, lr_cols=['ligand_complex', 'receptor_complex'], ct_cols=['source', 'target']):
+def join_pred_truth(lr_res, lrdata, cpdata, lr_cols=['ligand', 'receptor'], ct_cols=['source', 'target']):
     lr_res = lr_res.copy()
     lr_truth = lrdata.var
     lr_truth['lr_truth'] = ((p_adjust_fdr((lr_truth['morans_pvals']) <= 0.05)) * (lr_truth['morans_r'] > 0)).astype(np.int8)
@@ -117,12 +124,25 @@ def join_pred_truth(lr_res, lrdata, cpdata, lr_cols=['ligand_complex', 'receptor
     ct_truth['ct_truth'] = (p_adjust_fdr((ct_truth['morans_pvals']) <= 0.05) * (ct_truth['morans_r'] > 0)).astype(np.int8)
     ct_truth = ct_truth[ct_cols + ['ct_truth']]
 
-    gt = lr_res.merge(lr_truth, left_on=lr_cols, right_on=lr_cols, how='inner')
+    gt = lr_res.merge(lr_truth, left_on=['ligand_complex', 'receptor_complex'], right_on=lr_cols, how='inner')
     gt = gt.merge(ct_truth, left_on=ct_cols, right_on=ct_cols, how='inner')
 
     gt['truth'] = gt['lr_truth'] * gt['ct_truth']
     
     return gt
+
+
+def generate_random_baseline(gt, score_key, metric_fun, n_perms=100, **kwargs):
+    rng = np.random.default_rng()
+    random_scores = []
+    gt = gt.copy()
+    for i in range(n_perms):
+        gt[score_key] = rng.permutation(gt[score_key].values)
+        random_scores.append(metric_fun(gt, score_key, **kwargs))
+        
+    return np.mean(random_scores)
+
+
 
 def plot_roc(fpr, tpr, auroc, score_key=''):
     # Plot ROC curve
@@ -170,3 +190,26 @@ def plot_precision_recall(recall, precision, auprc, score_key=''):
     plt.title(f'Precision-Recall Curve for {score_key}')
     plt.legend(loc="lower left")
     plt.show()
+    
+    
+def calc_weighted_f1(gt, score_key, average='binary'):
+    y_true, y_scores = gt['truth'], gt[score_key]
+
+    weighted_f1 = f1_score(y_true, y_scores, average=average)
+    
+    return weighted_f1
+
+def calc_accuracy(gt, score_key):
+    y_true, y_scores = gt['truth'], gt[score_key]
+    accuracy = balanced_accuracy_score(y_true, y_scores, adjusted=False)
+    return accuracy
+
+def calc_precision(gt, score_key):
+    y_true, y_scores = gt['truth'], gt[score_key]
+    precision = precision_score(y_true, y_scores)
+    return precision
+
+def calc_recall(gt, score_key):
+    y_true, y_scores = gt['truth'], gt[score_key]
+    recall = recall_score(y_true, y_scores)
+    return recall

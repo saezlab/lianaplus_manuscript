@@ -9,7 +9,61 @@ from sklearn.metrics import roc_auc_score, f1_score, r2_score, mean_squared_erro
 import scanpy as sc
 from mudata import MuData
 import liana as li
+import stlearn as st
+from anndata import AnnData
 
+def run_local(adata, function_name, standardize):
+    li.ut.spatial_neighbors(adata, set_diag=True, bandwidth=150, cutoff=0.1, standardize=standardize)
+    li.mt.lr_bivar(adata,
+                function_name=function_name,
+                obsm_added=function_name, 
+                use_raw=False, 
+                verbose=True,
+                n_perms=None,
+                )
+
+lrs = li.rs.explode_complexes(li.rs.select_resource())
+lrs['interaction'] = lrs['ligand'] + '_' + lrs['receptor']
+
+def run_stlearn(adata, key='-log10(p_adjs)', obsm_key='stLearn'):
+    st.tl.cci.run(adata, 
+        np.unique(lrs['interaction'].values),
+        min_spots = 20, 
+        distance=None, # None defaults to spot+immediate neighbours; distance=0 for within-spot mode
+        n_pairs=100, # Number of random pairs to generate; low as example, recommend ~10,000
+        n_cpus=None, # Number of CPUs for parallel. If None, detects & use all available.
+        )
+    lr_info = adata.uns['lr_summary']
+    scores = AnnData(var=pd.DataFrame(index=lr_info.index),
+                     obs=adata.obs,
+                     X=adata.obsm[key], 
+                     uns=adata.uns, 
+                     obsm=adata.obsm)
+    adata.obsm[obsm_key] = scores
+    
+
+def convert_scanpy(adata, use_quality: str = "hires"):
+    """
+    Taken from stLearn https://github.com/BiomedicalMachineLearning/stLearn
+    """
+
+    adata.var_names_make_unique()
+
+    library_id = list(adata.uns["spatial"].keys())[0]
+
+    if use_quality == "fulres":
+        image_coor = adata.obsm["spatial"]
+    else:
+        scale = adata.uns["spatial"][library_id]["scalefactors"][
+            "tissue_" + use_quality + "_scalef"
+        ]
+        image_coor = adata.obsm["spatial"] * scale
+
+    adata.obs["imagecol"] = image_coor[:, 0]
+    adata.obs["imagerow"] = image_coor[:, 1]
+    adata.uns["spatial"][library_id]["use_quality"] = use_quality
+
+    return adata
 
 clf = RandomForestClassifier(n_estimators=100, random_state=1337, oob_score=True, n_jobs=-1)
 
@@ -41,9 +95,7 @@ def _get_assay(adata, function_name):
     return X
         
 def run_rf_auc(adata, dataset_name):
-    
-    # just need those to define dimensions
-    X_dummy = _get_assay(adata, 'cosine')
+    X_dummy = adata.X
     y_dummy = adata.obs['spot_label'].values
     
     skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=1337)

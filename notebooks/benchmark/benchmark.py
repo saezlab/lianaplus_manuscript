@@ -4,11 +4,11 @@ import anndata as ad
 from scipy.sparse import csr_matrix
 
 import scanpy as sc
-import squidpy as sq
+import liana as li
 
 from itertools import product
 
-import psutil
+from memory_profiler import memory_usage
 from timeit import default_timer as timer
 
 
@@ -31,7 +31,7 @@ def _sample_anndata(sparsity = 0.90, n_ct = 10, n_vars = 2000, n_obs = 1000, see
     y = rng.integers(low=0, high=5000, size=adata.shape[0])
     adata.obsm['spatial'] = np.array([x, y]).T
     
-    sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True)
+    li.ut.spatial_neighbors(adata, cutoff=0.1, bandwidth=150, max_neighbours=10)
     
     # assign cell types
     ct = rng.choice([f"CT{i:d}" for i in range(n_ct)], size=(adata.n_obs,))
@@ -53,11 +53,14 @@ def _sample_resource(adata, n_lrs = 3000, seed=1337):
     return resource
 
 def _benchmark(function, **kwargs):
-    # run function
+    # Define a wrapper function that will be passed to memory_usage
+    def wrapper():
+        function(**kwargs)
+
     start = timer()
-    process = psutil.Process(function(**kwargs))
+    peak_memory = memory_usage(proc=wrapper, max_usage=True, include_children=True)
+
     end = timer()
-    time = end - start
-    
-    memory = process.memory_info().rss / 1e6
-    return time, memory
+    time_taken = end - start
+
+    return time_taken, peak_memory / (1024 ** 2)

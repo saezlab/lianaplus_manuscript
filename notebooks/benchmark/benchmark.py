@@ -25,7 +25,7 @@ def _sample_anndata(sparsity = 0.90, n_ct = 10, n_vars = 2000, n_obs = 1000, see
     
     adata.var_names = [f"Gene{i:d}" for i in range(adata.n_vars)]
     adata.obs_names = [f"Cell{i:d}" for i in range(adata.n_obs)]
-    print(f" NNZ fraction: {adata.X.nnz / (adata.X.shape[0] * adata.X.shape[1])}")# Make resource
+    print(f" NNZ fraction: {adata.X.nnz / (adata.X.shape[0] * adata.X.shape[1])}")
     
     x = rng.integers(low=0, high=5000, size=adata.shape[0])
     y = rng.integers(low=0, high=5000, size=adata.shape[0])
@@ -43,13 +43,8 @@ def _sample_anndata(sparsity = 0.90, n_ct = 10, n_vars = 2000, n_obs = 1000, see
 
 def _sample_resource(adata, n_lrs = 3000, seed=1337):
     resource = pd.DataFrame(product(adata.var_names, adata.var_names)).rename(columns={0: "ligand", 1: "receptor"})
-    # pick n_lrs random rows
-    
-    # remove same ligand; same receptor
     resource = resource[resource["ligand"] != resource["receptor"]]
-    
     resource = resource.sample(n_lrs, replace=False, random_state=seed)
-    
     return resource
 
 def _benchmark(function, **kwargs):
@@ -63,4 +58,4 @@ def _benchmark(function, **kwargs):
     end = timer()
     time_taken = end - start
 
-    return time_taken, peak_memory / (1024 ** 2)
+    return time_taken, peak_memory

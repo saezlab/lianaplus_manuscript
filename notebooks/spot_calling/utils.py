@@ -12,14 +12,13 @@ import liana as li
 import stlearn as st
 from anndata import AnnData
 
-def run_local(adata, function_name, standardize):
+def run_local(adata, function_name, standardize , **kwargs):
     li.ut.spatial_neighbors(adata, set_diag=True, bandwidth=150, cutoff=0.1, standardize=standardize)
     li.mt.lr_bivar(adata,
                 function_name=function_name,
                 obsm_added=function_name, 
                 use_raw=False, 
-                verbose=True,
-                n_perms=None,
+                **kwargs
                 )
 
 lrs = li.rs.explode_complexes(li.rs.select_resource())
@@ -172,9 +171,6 @@ def _evaluate_regression(X, y, dataset_name, function_name, regressor):
         # Calculate RMSE
         rmse = np.sqrt(mean_squared_error(y_test, y_pred))
         rmse_scores.append(rmse)
-        
-        # train & test index
-        print(f"train_index: {train_index}")
         print(f"test_index: {test_index}")
         
     eval_df = pd.DataFrame({'dataset_name':dataset_name.split('.')[0],

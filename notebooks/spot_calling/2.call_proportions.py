@@ -39,7 +39,7 @@ for dataset_name in dataset_names:
             else:
                 standardize = True
             
-            run_local(adata, function_name, standardize=standardize)
+            run_local(adata, function_name, standardize=standardize, mask_negatives=True)
         
         print(f'Running {function_name}')
         

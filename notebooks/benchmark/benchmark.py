@@ -11,6 +11,9 @@ from itertools import product
 from memory_profiler import memory_usage
 from timeit import default_timer as timer
 
+obs_range = [1000, 5000, 10000, 50000, 100000]
+n_times = 5
+
 
 def _sample_anndata(sparsity = 0.90, n_ct = 10, n_vars = 2000, n_obs = 1000, seed=1337):    
     rng = np.random.default_rng(seed=seed)
@@ -53,7 +56,7 @@ def _benchmark(function, **kwargs):
         function(**kwargs)
 
     start = timer()
-    peak_memory = memory_usage(proc=wrapper, max_usage=True, include_children=True)
+    peak_memory = memory_usage(proc=wrapper, max_usage=True, include_children=True, multiprocess=True)
 
     end = timer()
     time_taken = end - start

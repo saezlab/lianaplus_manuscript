@@ -11,7 +11,7 @@ from itertools import product
 from memory_profiler import memory_usage
 from timeit import default_timer as timer
 
-obs_range = [1000, 5000, 10000, 50000, 100000]
+obs_range = [1000, 5000, 10000, 25000, 50000, 100000]
 n_times = 5
 
 

@@ -8,7 +8,7 @@ file_path = path.dirname(path.abspath(__file__))
 
 benchmark_stats = pd.DataFrame(columns=["method", "dataset", "time", "memory"])
 function_names = li.mt.bivar.show_functions()['name'].values
-n_lrs = 500
+n_lrs = 1000
 
 for n_obs in obs_range:
     print(n_obs)
@@ -18,7 +18,7 @@ for n_obs in obs_range:
         
     for method in function_names:
         print(method)
-        if (method=='masked_spearman') and (n_obs>25000):
+        if (method=='masked_spearman') and (n_obs>50000):
             continue
         
         for _ in range(n_times):

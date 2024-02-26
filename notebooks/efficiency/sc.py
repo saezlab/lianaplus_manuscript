@@ -39,9 +39,8 @@ def benchmark_methods(obs_range, methods, output_file, n_times=5, n_lrs=2000, **
                                           **kwargs
                                           )
                 benchmark_stats.loc[len(benchmark_stats)] = [method, n_obs, time, memory]
-        benchmark_stats.to_csv(output_file, index=False)
-        
-        gc.collect()
+                benchmark_stats.to_csv(output_file, index=False)
+                gc.collect()
 
     return benchmark_stats
 

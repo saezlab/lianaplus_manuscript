@@ -9,8 +9,14 @@ from sklearn.metrics import roc_auc_score, f1_score, r2_score, mean_squared_erro
 import scanpy as sc
 from mudata import MuData
 import liana as li
-import stlearn as st
 from anndata import AnnData
+
+# if st is available
+try:
+    import stlearn as st
+except ImportError:
+    pass
+
 
 def run_local(adata, function_name, standardize , **kwargs):
     li.ut.spatial_neighbors(adata, set_diag=True, bandwidth=150, cutoff=0.1, standardize=standardize)

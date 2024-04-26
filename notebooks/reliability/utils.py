@@ -85,16 +85,21 @@ def process_reichart():
                     layer=layer
                     )
 
-
 def process_simonson():
     simonson = sc.read_h5ad("../../data/Simonson2023_ICM.h5ad")
     return process(simonson)
 
-
-def process_simonson():
-    simonson = sc.read_h5ad("../../data/Simonson2023_ICM.h5ad")
+def process_koenig():
+    simonson = sc.read_h5ad("../../data/Koenig2022_DCM.h5ad")
     return process(simonson)
 
+def process_armute():
+    armute = sc.read_h5ad("../../data/Armute2023_LVAD.h5ad")
+    return process(armute)
+
+def process_chaffin():
+    armute = sc.read_h5ad("../../data/Chaffin2022_DCM.h5ad")
+    return process(armute)
 
 def calculate_p_value(gt, random):
     # make a distribution out of random

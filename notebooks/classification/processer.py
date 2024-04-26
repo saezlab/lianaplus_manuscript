@@ -46,7 +46,7 @@ class DatasetHandler:
                 "n_factors":10,
             },
             'kuppe': {
-                'groupby': 'cell_type',
+                'groupby': 'cell_type_original',
                 'sample_key': 'sample',
                 'condition_key': 'patient_group',
                 'use_raw': True,

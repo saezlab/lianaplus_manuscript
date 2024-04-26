@@ -69,11 +69,15 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, dataset_name, n_fa
                                   uns_key=score_key
                                   ).copy()
     
+    if dataset_name is not None:
+        outfile = os.path.join('data', 'results', 'models', dataset_name, f'{score_key}.hdf5')
+    else:
+        outfile = None
     mu.tl.mofa(mdata,
                use_obs='union',
                convergence_mode='medium',
                n_factors=n_factors,
-               outfile=os.path.join('data', 'results', 'models', dataset_name, f'{score_key}.hdf5'),
+               outfile=outfile,
                seed=1337,
                gpu_mode=gpu_mode,
                )
@@ -85,8 +89,9 @@ def run_mofatalk(adata, score_key, sample_key, condition_key, dataset_name, n_fa
     adata.uns['mofa_res']['X'][score_key] = factor_scores
     
     ## create & write to dataset_name folder
-    os.makedirs(os.path.join('data', 'results', 'mofa', dataset_name), exist_ok=True)
-    factor_scores.to_csv(os.path.join('data', 'results', 'mofa', dataset_name, f'{score_key}.csv'))    
+    if dataset_name is not None:
+        os.makedirs(os.path.join('data', 'results', 'mofa', dataset_name), exist_ok=True)
+        factor_scores.to_csv(os.path.join('data', 'results', 'mofa', dataset_name, f'{score_key}.csv'))    
     
     adata.uns['mofa_res']['X_0'][score_key] = mdata.obsm['X_mofa'].copy()
     adata.uns['mofa_res']['y_0'][score_key] = _encode_y(y)

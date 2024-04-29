@@ -15,10 +15,10 @@ def encode_y(y):
     le.fit(y)
     return le.transform(y)
 
-def get_ground_truth():
-    gt = pd.read_csv("../kuppe/results/edges_Myeloid.csv")[['source', 'target']]
-    gt = li.rs.explode_complexes(gt, SOURCE='source', TARGET='target')
-    gt = np.union1d(gt['source'], gt['target'])
+def get_ground_truth(df, source='ligand_complex', target='receptor_complex'):
+    gt = df[[source, target]]
+    gt = li.rs.explode_complexes(gt, SOURCE=source, TARGET=target)
+    gt = np.union1d(gt[source], gt[target])
     
     return gt
     
@@ -33,7 +33,7 @@ def process(adata,
     adata = adata[adata.obs[groupby]==myeloid_label]
     pdata = dc.get_pseudobulk(adata,
                               sample_col=sample_key,
-                              groups_col=groupby,
+                              groups_col=None,
                               min_cells=10,
                               min_counts=1000,
                               layer=layer,

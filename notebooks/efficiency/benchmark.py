@@ -15,12 +15,15 @@ obs_range = [1000, 5000, 10000, 25000, 50000, 100000]
 n_times = 5
 
 
-def _sample_anndata(sparsity = 0.90, n_ct = 10, n_vars = 2000, n_obs = 1000, seed=1337):    
-    rng = np.random.default_rng(seed=seed)
+def _generate_counts(n_obs, n_vars, sparsity, rng):
     counts = rng.poisson(100, size=(n_obs, n_vars))
     mask = rng.choice([0, 1], size=(n_obs, n_vars), p=[sparsity, 1 - sparsity])
     counts = csr_matrix(counts * mask, dtype=np.float32)
-    
+    return counts
+
+def _sample_anndata(sparsity = 0.90, n_ct = 10, n_vars = 2000, n_obs = 1000, seed=1337): 
+    rng = np.random.default_rng(seed=seed)   
+    counts = _generate_counts(n_obs=n_obs, n_vars=n_vars, sparsity=sparsity, rng=rng)
     adata = ad.AnnData(counts)
     sc.pp.filter_cells(adata, min_counts=1)
     sc.pp.normalize_total(adata, target_sum=1e4)
@@ -51,7 +54,6 @@ def _sample_resource(adata, n_lrs = 3000, seed=1337):
     return resource
 
 def _benchmark(function, **kwargs):
-    # Define a wrapper function that will be passed to memory_usage
     def wrapper():
         function(**kwargs)
 

@@ -20,7 +20,6 @@ N_SPLITS = 3
 INVERSE_FUN = lambda x: -np.log10(x)
 
 # TODO: run method -> classify; next method (not loop over all methods)
-
 def _dict_setup(adata, uns_key):
     adata.uns[uns_key] = dict()
     adata.uns[uns_key] = {'X': {}, 'X_0': {}, 'y_0': {}, 'dimred_extra': {}}

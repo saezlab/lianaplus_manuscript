@@ -132,8 +132,8 @@ def join_pred_truth(lr_res, lrdata, cpdata, lr_cols=['ligand', 'receptor'], ct_c
     return gt
 
 
-def generate_random_baseline(gt, score_key, metric_fun, n_perms=100, **kwargs):
-    rng = np.random.default_rng()
+def generate_random_baseline(gt, score_key, metric_fun, n_perms=1000, **kwargs):
+    rng = np.random.default_rng(seed=42)
     random_scores = []
     gt = gt.copy()
     for i in range(n_perms):

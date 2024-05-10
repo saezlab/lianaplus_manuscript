@@ -1,4 +1,4 @@
-#LIANA+ Combines Dissociated Single-cell with Spatial Data to identify deregulated Intercellular and Intracellular Signalling across Conditions (Figure 3)
+# LIANA+ Combines Dissociated Single-cell with Spatial Data to identify deregulated Intercellular and Intracellular Signalling across Conditions (Figure 3)
 
 Notebook 0: exports the prior knowledge used in the analysis presented in Figure 3
 Notebooks 1-7: perform the analysis on Kuppe et al

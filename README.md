@@ -5,6 +5,7 @@ The repository is organized as follows:
 - `data/`: contains the small metadata files used in the manuscript.
 - `notebooks/`: contains the notebooks used to generate the figures in the manuscript.
 - `environments/`: contains the conda environments used to run the notebooks.
+- `generate_source_table.py`: script to compile csvs from figures and supps into Supp Data.
 
 See `notebooks\README.md` for all dataset and analysis descriptions.
 

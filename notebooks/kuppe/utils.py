@@ -96,7 +96,12 @@ def process(adata,
     sc.pp.log1p(pdata)
     sc.pp.scale(pdata, max_value=10)
     
+    # save a minimal pbulk profile
     y_true = encode_y(pdata.obs[condition_key])
+    pdata.obs = pd.DataFrame(index=pdata.obs.index, data=pdata.obs[[condition_key, sample_key, groupby]])
+    pdata.obs['y_true'] = np.array(y_true)
+    pdata.var = pd.DataFrame(index=pdata.var.index)
+    pdata.write_h5ad(f'results/pbulks/{condition_key}.h5ad')
     
     return pdata, y_true
 

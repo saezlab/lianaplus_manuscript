@@ -17,7 +17,6 @@ Within `efficiecny` folder, are the notebooks to reproduce the results on the ef
 Within `slideseq_benchmark` folder, are the notebooks to reproduce the results on the Slide-seq benchmarking (8).
 
 
-
 ## Datasets
 
 1. [Kuppe et al. (2022)](https://www.nature.com/articles/s41586-022-05060-x) Spatial and single-cell infarction data, obtained via https://cellxgene.cziscience.com/collections/8191c283-0816-424b-9b61-c3e1d6258a77 
@@ -28,3 +27,16 @@ Within `slideseq_benchmark` folder, are the notebooks to reproduce the results o
 6. [Wu et al., 2021](https://www.nature.com/articles/s41588-021-00911-1) Processed breast cancer 10× Visium slides are available at https://zenodo.org/record/4739739. 
 7. [Vicari et al, 2023](https://www.nature.com/articles/s41587-023-01937-y) Parkinson's disease data, obtained via https://data.mendeley.com/datasets/w7nw4km7xd/1
 8. [Russell et al., 2023](https://www.nature.com/articles/s41586-023-06837-4) Slide-Seq datasets were obtained via the Broad Institute Single Cell Portal: mouse embryonic brain - [SCP2170](https://singlecell.broadinstitute.org/single_cell/study/SCP2170); mouse brain - [SCP2162](https://singlecell.broadinstitute.org/single_cell/study/SCP2162)  human brain: [SCP2167](https://singlecell.broadinstitute.org/single_cell/study/SCP2167), human tonsil [SCP2169](https://singlecell.broadinstitute.org/single_cell/study/SCP2169); [SCP2171](https://singlecell.broadinstitute.org/single_cell/study/SCP2171); and human melanoma multiome - [SCP2176](https://singlecell.broadinstitute.org/single_cell/study/SCP2176); also available under GEO GSE244355.
+9. Datasets used for the reliability of predictions:
+
+| Dataset   | Samples | Condition                         | Reference | Data URL                                                                                                      |
+|-----------|---------|-----------------------------------|-----------|---------------------------------------------------------------------------------------------------------------|
+| Kuppe     | 23      | Acute cardiac Infarction          | https://www.nature.com/articles/s41586-022-05060-x        | [Link](https://cellxgene.cziscience.com/collections/8191c283-0816-424b-9b61-c3e1d6258a77)                    |
+| Reichart  | 126     | Cardiomyopathies                  | https://www.science.org/doi/10.1126/science.abo1984        | [Link](https://cellxgene.cziscience.com/collections/e75342a8-0f3b-4ec5-8ee1-245a23e0f7cb)                    |
+| Simonson  | 15      | Ischemic cardiomyopathy           | https://www.sciencedirect.com/science/article/pii/S2211124723000979?via%3Dihub        | [Link](https://singlecell.broadinstitute.org/single_cell/study/SCP1849/)                                      |
+| Koenig    | 38      | dilated (nonischemic) cardiomyopathy | https://www.nature.com/articles/s44161-022-00028-6      | [Link](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183852)                                          |
+| Chaffin   | 42      | dilated and hypertrophic cardiomyopathy | https://www.nature.com/articles/s41586-022-04817-8    | [Link](https://singlecell.broadinstitute.org/single_cell/study/SCP1303/)                                      |
+| Armute    | 40      | Cardiomyopathies                  | https://www.nature.com/articles/s44161-023-00260-8        | [Link](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE226314)                                          |
+
+
+‡ Number of samples included in the evaluation				

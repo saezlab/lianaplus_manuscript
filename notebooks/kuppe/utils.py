@@ -77,7 +77,8 @@ def process(adata,
             groupby='cell_type',
             condition_key='heart_failure',
             myeloid_label='Myeloid',
-            layer=None):
+            layer=None,
+            name='dataset'):
     
     adata = adata[adata.obs[groupby]==myeloid_label]
     pdata = dc.get_pseudobulk(adata,
@@ -101,7 +102,7 @@ def process(adata,
     pdata.obs = pd.DataFrame(index=pdata.obs.index, data=pdata.obs[[condition_key, sample_key, groupby]])
     pdata.obs['y_true'] = np.array(y_true)
     pdata.var = pd.DataFrame(index=pdata.var.index)
-    pdata.write_h5ad(f'results/pbulks/{condition_key}.h5ad')
+    pdata.write_h5ad(f'results/pbulks/{name}.h5ad')
     
     return pdata, y_true
 
@@ -117,43 +118,46 @@ def process_kuppe():
     kuppe = kuppe[kuppe.obs[condition_key].isin(['myogenic', 'ischemic'])]
     
     return process(adata=kuppe,
-                    sample_key=sample_key,
-                    myeloid_label=myeloid_label,
-                    condition_key=condition_key,
-                    groupby=groupby,
-                    layer=layer)
+                   sample_key=sample_key,
+                   myeloid_label=myeloid_label,
+                   condition_key=condition_key,
+                   groupby=groupby,
+                   layer=layer,
+                   name='kuppe')
 
 def process_reichart():
-    reichart = sc.read_h5ad('../classification/data/interim/reichart_processed.h5ad')
+    adata = sc.read_h5ad('../classification/data/interim/reichart_processed.h5ad')
     groupby='cell_type'
     sample_key='Sample'
     condition_key='disease'
     myeloid_label = 'myeloid cell'
     layer = 'counts'
     
-    return process(adata=reichart,
+    return process(adata=adata,
                     sample_key=sample_key,
                     myeloid_label=myeloid_label,
                     condition_key=condition_key,
                     groupby=groupby,
-                    layer=layer
+                    layer=layer,
+                    name='reichart'
                     )
+                    
 
 def process_simonson():
-    simonson = sc.read_h5ad("../../data/Simonson2023_ICM.h5ad")
-    return process(simonson)
+    adata = sc.read_h5ad("../../data/Simonson2023_ICM.h5ad")
+    return process(adata, name='simonson')
 
 def process_koenig():
-    simonson = sc.read_h5ad("../../data/Koenig2022_DCM.h5ad")
-    return process(simonson)
+    adata = sc.read_h5ad("../../data/Koenig2022_DCM.h5ad")
+    return process(adata, name='koenig')
 
 def process_armute():
-    armute = sc.read_h5ad("../../data/Armute2023_LVAD.h5ad")
-    return process(armute)
+    adata = sc.read_h5ad("../../data/Armute2023_LVAD.h5ad")
+    return process(adata, name='armute')
 
 def process_chaffin():
-    armute = sc.read_h5ad("../../data/Chaffin2022_DCM.h5ad")
-    return process(armute)
+    adata = sc.read_h5ad("../../data/Chaffin2022_DCM.h5ad")
+    return process(adata, name='chaffin')
 
 def calculate_p_value(gt, random):
     # make a distribution out of random

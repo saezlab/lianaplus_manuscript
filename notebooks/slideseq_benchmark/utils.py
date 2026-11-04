@@ -117,11 +117,11 @@ def onehot_groupby(adata, groupby='cell_type'):
 def join_pred_truth(lr_res, lrdata, cpdata, lr_cols=['ligand', 'receptor'], ct_cols=['source', 'target']):
     lr_res = lr_res.copy()
     lr_truth = lrdata.var
-    lr_truth['lr_truth'] = ((p_adjust_fdr((lr_truth['morans_pvals']) <= 0.05)) * (lr_truth['morans_r'] > 0)).astype(np.int8)
+    lr_truth['lr_truth'] = ((p_adjust_fdr(lr_truth['morans_pvals']) < 0.05) * (lr_truth['morans_r'] > 0)).astype(np.int8)
     lr_truth = lr_truth[lr_cols + ['lr_truth']]
 
     ct_truth = cpdata.var.copy().rename(columns={'ligand': 'source', 'receptor': 'target'})
-    ct_truth['ct_truth'] = (p_adjust_fdr((ct_truth['morans_pvals']) <= 0.05) * (ct_truth['morans_r'] > 0)).astype(np.int8)
+    ct_truth['ct_truth'] = ((p_adjust_fdr(ct_truth['morans_pvals']) < 0.05) * (ct_truth['morans_r'] > 0)).astype(np.int8)
     ct_truth = ct_truth[ct_cols + ['ct_truth']]
 
     gt = lr_res.merge(lr_truth, left_on=['ligand_complex', 'receptor_complex'], right_on=lr_cols, how='inner')
